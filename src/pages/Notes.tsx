@@ -3,7 +3,10 @@ import { getNotes, setNotes } from '../lib/data'
 import { getCurrentUser } from '../lib/auth'
 import { formatDate } from '../lib/utils'
 import ResponsiveNav from '../components/ResponsiveNav'
-import { Plus, X, MessageSquare } from 'lucide-react'
+import PageHeader from '../components/PageHeader'
+import EmptyState from '../components/EmptyState'
+import { FormTextarea } from '../components/FormInput'
+import { Plus, X, MessageSquare, Sparkles } from 'lucide-react'
 import { Note } from '../types'
 
 function Notes() {
@@ -69,82 +72,64 @@ function Notes() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 md:ml-64">
+    <div className="min-h-screen bg-background-primary md:ml-64">
       <ResponsiveNav />
       
-      {/* Mobile Header */}
-      <div className="md:hidden bg-white shadow-sm pt-4">
-        <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-800">Notes</h1>
+      <PageHeader 
+        title="Notes" 
+        action={
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
-          >
-            <Plus size={24} />
-          </button>
-        </div>
-      </div>
-
-      {/* Desktop Header */}
-      <div className="hidden md:block bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-800">Notes</h1>
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
+            className="btn-primary flex items-center gap-2"
           >
             <Plus size={20} />
-            Send Note
+            <span className="hidden md:inline">Send Note</span>
           </button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Add Note Form */}
         {showAddForm && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-semibold text-gray-800">Send a Note</h3>
-              <button onClick={() => setShowAddForm(false)}>
+          <div className="card mb-6 animate-scale-in">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-semibold text-gray-800 text-lg">Send a Note</h3>
+              <button onClick={() => setShowAddForm(false)} className="p-2 hover:bg-background-secondary rounded-xl transition-colors">
                 <X size={24} className="text-gray-500" />
               </button>
             </div>
             <form onSubmit={handleSendNote} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                <div className="grid grid-cols-3 gap-2">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Choose the vibe</label>
+                <div className="grid grid-cols-3 gap-3">
                   {noteTypes.map((type) => (
                     <button
                       key={type.type}
                       type="button"
                       onClick={() => setNewNote({ ...newNote, type: type.type as Note['type'] })}
-                      className={`p-3 rounded-lg border-2 transition-colors ${
+                      className={`p-4 rounded-2xl border-2 transition-all ${
                         newNote.type === type.type
-                          ? 'border-red-500 bg-red-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-rose-400 bg-rose-50 text-rose-700'
+                          : 'border-soft hover:border-rose-300'
                       }`}
                     >
-                      <span className="text-2xl">{type.emoji}</span>
-                      <p className="text-xs mt-1">{type.label}</p>
+                      <div className="flex justify-center mb-2">
+                        <span className="text-3xl">{type.emoji}</span>
+                      </div>
+                      <p className="text-sm font-medium">{type.label}</p>
                     </button>
                   ))}
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
-                <textarea
-                  value={newNote.message}
-                  onChange={(e) => setNewNote({ ...newNote, message: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                  rows={4}
-                  placeholder="Write your message..."
-                  required
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition-colors"
-              >
+              <FormTextarea
+                label="Your message"
+                value={newNote.message}
+                onChange={(e) => setNewNote({ ...newNote, message: e.target.value })}
+                rows={4}
+                placeholder="Write something sweet..."
+                required
+              />
+              <button type="submit" className="btn-primary w-full">
                 Send Note
               </button>
             </form>
@@ -152,45 +137,63 @@ function Notes() {
         )}
 
         {/* Notes List */}
-        <div className="space-y-4">
-          {notes.map((note) => (
-            <div
-              key={note.id}
-              className={`bg-white rounded-2xl p-6 shadow-sm ${
-                isMyNote(note) ? 'ml-4 border-l-4 border-red-500' : 'mr-4 border-l-4 border-pink-500'
-              }`}
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">{getNoteTypeEmoji(note.type)}</span>
-                  <div>
-                    <span className="text-xs font-medium text-red-500 uppercase">
-                      {getNoteTypeLabel(note.type)}
-                    </span>
-                    <p className="text-sm text-gray-500">
-                      {isMyNote(note) ? 'From you' : 'To you'}
-                    </p>
+        {notes.length === 0 ? (
+          <EmptyState
+            icon={MessageSquare}
+            title="No notes yet"
+            description="Share your thoughts and feelings"
+            action={{
+              label: 'Send First Note',
+              onClick: () => setShowAddForm(true)
+            }}
+          />
+        ) : (
+          <div className="space-y-4">
+            {notes.map((note, index) => (
+              <div 
+                key={note.id} 
+                className={`card animate-slide-up ${
+                  isMyNote(note) 
+                    ? 'ml-0 md:ml-8 border-l-4 border-l-rose-400' 
+                    : 'mr-0 md:mr-8 border-l-4 border-l-purple-400'
+                } ${!note.read && !isMyNote(note) ? 'bg-gradient-to-r from-rose-50 to-peach-50' : ''}`}
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                    isMyNote(note) 
+                      ? 'bg-gradient-to-br from-peach-200 to-coral-200' 
+                      : 'bg-gradient-to-br from-rose-200 to-purple-200'
+                  }`}>
+                    <span className="text-2xl">{getNoteTypeEmoji(note.type)}</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <span className={`text-xs font-semibold uppercase tracking-wide ${
+                          isMyNote(note) ? 'text-rose-600' : 'text-purple-600'
+                        }`}>
+                          {getNoteTypeLabel(note.type)}
+                        </span>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {isMyNote(note) ? 'From you' : 'To you'}
+                        </p>
+                      </div>
+                      <span className="text-xs text-gray-400">{formatDate(note.created_at)}</span>
+                    </div>
+
+                    <p className="text-gray-800 leading-relaxed">{note.message}</p>
+
+                    {!note.read && !isMyNote(note) && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <Sparkles size={14} className="text-rose-500" />
+                        <span className="text-xs font-medium text-rose-600">New</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <span className="text-xs text-gray-500">{formatDate(note.created_at)}</span>
               </div>
-
-              <p className="text-gray-800">{note.message}</p>
-
-              {!note.read && !isMyNote(note) && (
-                <div className="mt-3">
-                  <span className="text-xs text-red-500 font-medium">New</span>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {notes.length === 0 && (
-          <div className="text-center py-12">
-            <MessageSquare size={48} className="text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No notes yet</p>
-            <p className="text-gray-400 text-sm">Send your first note!</p>
+            ))}
           </div>
         )}
       </div>

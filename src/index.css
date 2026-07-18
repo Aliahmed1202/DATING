@@ -2,11 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #FFF8F5;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-gradient-to-r from-peach-400 to-coral-400 text-white px-6 py-3 rounded-2xl font-semibold hover:shadow-soft-lg transition-all duration-200 active:scale-95;
+  }
+  
+  .btn-secondary {
+    @apply bg-white border-2 border-rose-400 text-rose-600 px-6 py-3 rounded-2xl font-semibold hover:bg-rose-50 transition-all duration-200 active:scale-95;
+  }
+  
+  .card {
+    @apply bg-white rounded-3xl shadow-soft p-6;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-3 bg-background-secondary border border-rose-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-rose-400 transition-all;
+  }
+  
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-md rounded-3xl shadow-glass p-6;
+  }
 }

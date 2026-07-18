@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react'
 import { getEvents, setEvents } from '../lib/data'
 import { formatDate } from '../lib/utils'
 import ResponsiveNav from '../components/ResponsiveNav'
-import { Plus, X, Calendar as CalendarIcon, MapPin } from 'lucide-react'
+import PageHeader from '../components/PageHeader'
+import EmptyState from '../components/EmptyState'
+import { FormInput, FormTextarea } from '../components/FormInput'
+import { Plus, X, Calendar as CalendarIcon, MapPin, Gift, Cake, Heart, Plane, Star, Map } from 'lucide-react'
 import { Event } from '../types'
 
 function Events() {
@@ -79,124 +82,104 @@ function Events() {
     }
   }
 
+  const getEventTypeIcon = (type: string) => {
+    switch (type) {
+      case 'birthday': return <Cake size={24} className="text-rose-600" />
+      case 'anniversary': return <Heart size={24} className="text-rose-600" />
+      case 'date': return <Heart size={24} className="text-coral-600" />
+      case 'trip': return <Plane size={24} className="text-purple-600" />
+      case 'important_day': return <Star size={24} className="text-yellow-600" />
+      default: return <Map size={24} className="text-gray-600" />
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 md:ml-64">
+    <div className="min-h-screen bg-background-primary md:ml-64">
       <ResponsiveNav />
       
-      {/* Mobile Header */}
-      <div className="md:hidden bg-white shadow-sm pt-4">
-        <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-800">Events</h1>
+      <PageHeader 
+        title="Events" 
+        action={
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
-          >
-            <Plus size={24} />
-          </button>
-        </div>
-      </div>
-
-      {/* Desktop Header */}
-      <div className="hidden md:block bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-800">Events</h1>
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
+            className="btn-primary flex items-center gap-2"
           >
             <Plus size={20} />
-            Add Event
+            <span className="hidden md:inline">Add Event</span>
           </button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Add Event Form */}
         {showAddForm && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-semibold text-gray-800">Add New Event</h3>
-              <button onClick={() => setShowAddForm(false)}>
+          <div className="card mb-6 animate-scale-in">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-semibold text-gray-800 text-lg">Add New Event</h3>
+              <button onClick={() => setShowAddForm(false)} className="p-2 hover:bg-background-secondary rounded-xl transition-colors">
                 <X size={24} className="text-gray-500" />
               </button>
             </div>
             <form onSubmit={handleAddEvent} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
-                <input
-                  type="text"
-                  value={newEvent.title}
-                  onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                  required
-                />
-              </div>
+              <FormInput
+                label="Title"
+                value={newEvent.title}
+                onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+                placeholder="What's the event?"
+                required
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Event Type</label>
                 <select
                   value={newEvent.event_type}
                   onChange={(e) => setNewEvent({ ...newEvent, event_type: e.target.value as Event['event_type'] })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
+                  className="input-field"
                 >
-                  <option value="birthday">Birthday</option>
-                  <option value="anniversary">Anniversary</option>
-                  <option value="date">Date</option>
-                  <option value="trip">Trip</option>
-                  <option value="important_day">Important Day</option>
-                  <option value="custom">Custom</option>
+                  <option value="birthday">🎂 Birthday</option>
+                  <option value="anniversary">💕 Anniversary</option>
+                  <option value="date">💝 Date</option>
+                  <option value="trip">✈️ Trip</option>
+                  <option value="important_day">⭐ Important Day</option>
+                  <option value="custom">📌 Custom</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                <input
-                  type="date"
-                  value={newEvent.date}
-                  onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Time (optional)</label>
-                <input
-                  type="time"
-                  value={newEvent.time}
-                  onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Location (optional)</label>
-                <input
-                  type="text"
-                  value={newEvent.location}
-                  onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description (optional)</label>
-                <textarea
-                  value={newEvent.description}
-                  onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                  rows={2}
-                />
-              </div>
-              <div className="flex items-center gap-2">
+              <FormInput
+                label="Date"
+                type="date"
+                value={newEvent.date}
+                onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
+                required
+              />
+              <FormInput
+                label="Time (optional)"
+                type="time"
+                value={newEvent.time}
+                onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
+              />
+              <FormInput
+                label="Location (optional)"
+                value={newEvent.location}
+                onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                placeholder="Where?"
+              />
+              <FormTextarea
+                label="Description (optional)"
+                value={newEvent.description}
+                onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                rows={2}
+                placeholder="Add details..."
+              />
+              <div className="flex items-center gap-3 p-4 bg-background-secondary rounded-2xl">
                 <input
                   type="checkbox"
                   id="repeat"
                   checked={newEvent.repeat_yearly}
                   onChange={(e) => setNewEvent({ ...newEvent, repeat_yearly: e.target.checked })}
-                  className="w-4 h-4 text-red-500 rounded focus:ring-red-500"
+                  className="w-5 h-5 text-rose-500 rounded focus:ring-rose-500"
                 />
-                <label htmlFor="repeat" className="text-sm text-gray-700">Repeat yearly</label>
+                <label htmlFor="repeat" className="text-sm font-medium text-gray-700">Repeat yearly</label>
               </div>
-              <button
-                type="submit"
-                className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition-colors"
-              >
+              <button type="submit" className="btn-primary w-full">
                 Save Event
               </button>
             </form>
@@ -204,47 +187,80 @@ function Events() {
         )}
 
         {/* Events List */}
-        <div className="space-y-4">
-          {events.map((event) => (
-            <div key={event.id} className="bg-white rounded-2xl p-6 shadow-sm">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <span className="text-xs font-medium text-red-500 uppercase">
-                    {getEventTypeLabel(event.event_type)}
-                  </span>
-                  <h3 className="text-lg font-semibold text-gray-800 mt-1">{event.title}</h3>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(event.status)}`}>
-                  {event.status}
-                </span>
-              </div>
+        {events.length === 0 ? (
+          <EmptyState
+            icon={CalendarIcon}
+            title="No events yet"
+            description="Plan your special moments together"
+            action={{
+              label: 'Add First Event',
+              onClick: () => setShowAddForm(true)
+            }}
+          />
+        ) : (
+          <div className="space-y-4">
+            {events.map((event, index) => {
+              const eventTypeIcon = getEventTypeIcon(event.event_type)
+              return (
+                <div 
+                  key={event.id} 
+                  className={`card animate-slide-up ${
+                    event.status === 'completed' ? 'opacity-60' : ''
+                  }`}
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
+                      event.event_type === 'birthday' ? 'bg-gradient-to-br from-peach-200 to-coral-200' :
+                      event.event_type === 'anniversary' ? 'bg-gradient-to-br from-rose-200 to-purple-200' :
+                      'bg-gradient-to-br from-peach-100 to-rose-100'
+                    }`}>
+                      {eventTypeIcon}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <span className="text-xs font-semibold uppercase tracking-wide text-rose-600">
+                            {getEventTypeLabel(event.event_type)}
+                          </span>
+                          <h3 className="text-lg font-semibold text-gray-800 mt-1">{event.title}</h3>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(event.status)}`}>
+                          {event.status}
+                        </span>
+                      </div>
 
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <CalendarIcon size={16} />
-                  <span>{formatDate(event.date)}</span>
-                  {event.time && <span>at {event.time}</span>}
-                </div>
-                {event.location && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <MapPin size={16} />
-                    <span>{event.location}</span>
+                      <div className="space-y-2 mb-3">
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <CalendarIcon size={16} className="text-rose-500" />
+                          <span className="font-medium">{formatDate(event.date)}</span>
+                          {event.time && <span className="text-gray-400">at {event.time}</span>}
+                        </div>
+                        {event.location && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <MapPin size={16} className="text-rose-500" />
+                            <span>{event.location}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {event.description && (
+                        <p className="text-gray-600 text-sm mb-3">{event.description}</p>
+                      )}
+
+                      {event.repeat_yearly && (
+                        <div className="flex items-center gap-2 text-xs text-purple-600 bg-purple-50 px-3 py-1 rounded-full w-fit">
+                          <Gift size={14} />
+                          <span>Repeats yearly</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-
-              {event.description && (
-                <p className="text-gray-600 text-sm">{event.description}</p>
-              )}
-
-              {event.repeat_yearly && (
-                <div className="mt-3">
-                  <span className="text-xs text-gray-500">Repeats yearly</span>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )

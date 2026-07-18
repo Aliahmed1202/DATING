@@ -3,7 +3,10 @@ import { getMemories, setMemories, getRelationshipScore, setRelationshipScore } 
 import { getCurrentUser } from '../lib/auth'
 import { formatDate } from '../lib/utils'
 import ResponsiveNav from '../components/ResponsiveNav'
-import { Heart, Plus, X } from 'lucide-react'
+import PageHeader from '../components/PageHeader'
+import EmptyState from '../components/EmptyState'
+import { FormInput, FormTextarea } from '../components/FormInput'
+import { Heart, Plus, X, Star } from 'lucide-react'
 import { Memory } from '../types'
 
 function Memories() {
@@ -75,93 +78,89 @@ function Memories() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 md:ml-64">
+    <div className="min-h-screen bg-background-primary md:ml-64">
       <ResponsiveNav />
       
-      {/* Mobile Header */}
-      <div className="md:hidden bg-white shadow-sm pt-4">
-        <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-800">Memories</h1>
+      <PageHeader 
+        title="Memories" 
+        action={
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
-          >
-            <Plus size={24} />
-          </button>
-        </div>
-      </div>
-
-      {/* Desktop Header */}
-      <div className="hidden md:block bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-800">Memories</h1>
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
+            className="btn-primary flex items-center gap-2"
           >
             <Plus size={20} />
-            Add Memory
+            <span className="hidden md:inline">Add Memory</span>
           </button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Add Memory Form */}
         {showAddForm && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-semibold text-gray-800">Add New Memory</h3>
-              <button onClick={() => setShowAddForm(false)}>
+          <div className="card mb-6 animate-scale-in">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-semibold text-gray-800 text-lg">Add New Memory</h3>
+              <button onClick={() => setShowAddForm(false)} className="p-2 hover:bg-background-secondary rounded-xl transition-colors">
                 <X size={24} className="text-gray-500" />
               </button>
             </div>
             <form onSubmit={handleAddMemory} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
-                <input
-                  type="text"
-                  value={newMemory.title}
-                  onChange={(e) => setNewMemory({ ...newMemory, title: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                <textarea
-                  value={newMemory.description}
-                  onChange={(e) => setNewMemory({ ...newMemory, description: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                  rows={3}
-                />
-              </div>
+              <FormInput
+                label="Title"
+                value={newMemory.title}
+                onChange={(e) => setNewMemory({ ...newMemory, title: e.target.value })}
+                placeholder="What's this memory about?"
+                required
+              />
+              <FormTextarea
+                label="Description"
+                value={newMemory.description}
+                onChange={(e) => setNewMemory({ ...newMemory, description: e.target.value })}
+                rows={3}
+                placeholder="Tell the story..."
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Memory Type</label>
-                <select
-                  value={newMemory.memory_type}
-                  onChange={(e) => setNewMemory({ ...newMemory, memory_type: e.target.value as 'good' | 'hard_moment' })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                >
-                  <option value="good">Good Memory</option>
-                  <option value="hard_moment">Moment We Overcame</option>
-                </select>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setNewMemory({ ...newMemory, memory_type: 'good' })}
+                    className={`p-4 rounded-2xl border-2 transition-all ${
+                      newMemory.memory_type === 'good'
+                        ? 'border-rose-400 bg-rose-50 text-rose-700'
+                        : 'border-soft hover:border-rose-300'
+                    }`}
+                  >
+                    <Heart size={24} className="mx-auto mb-2" />
+                    <span className="font-medium">Good Memory</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewMemory({ ...newMemory, memory_type: 'hard_moment' })}
+                    className={`p-4 rounded-2xl border-2 transition-all ${
+                      newMemory.memory_type === 'hard_moment'
+                        ? 'border-purple-400 bg-purple-50 text-purple-700'
+                        : 'border-soft hover:border-purple-300'
+                    }`}
+                  >
+                    <Star size={24} className="mx-auto mb-2" />
+                    <span className="font-medium">Moment We Overcame</span>
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                <input
-                  type="date"
-                  value={newMemory.memory_date}
-                  onChange={(e) => setNewMemory({ ...newMemory, memory_date: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                  required
-                />
-              </div>
+              <FormInput
+                label="Date"
+                type="date"
+                value={newMemory.memory_date}
+                onChange={(e) => setNewMemory({ ...newMemory, memory_date: e.target.value })}
+                required
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Mood</label>
                 <select
                   value={newMemory.mood}
                   onChange={(e) => setNewMemory({ ...newMemory, mood: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
+                  className="input-field"
                 >
                   <option value="happy">Happy</option>
                   <option value="excited">Excited</option>
@@ -170,10 +169,7 @@ function Memories() {
                   <option value="grateful">Grateful</option>
                 </select>
               </div>
-              <button
-                type="submit"
-                className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition-colors"
-              >
+              <button type="submit" className="btn-primary w-full">
                 Save Memory
               </button>
             </form>
@@ -181,43 +177,67 @@ function Memories() {
         )}
 
         {/* Memories List */}
-        <div className="space-y-4">
-          {memories.map((memory) => (
-            <div key={memory.id} className="bg-white rounded-2xl p-6 shadow-sm">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <span className="text-xs font-medium text-red-500 uppercase">
-                    {getMemoryTypeLabel(memory.memory_type)}
+        {memories.length === 0 ? (
+          <EmptyState
+            icon={Heart}
+            title="No memories yet"
+            description="Start creating beautiful memories together"
+            action={{
+              label: 'Add First Memory',
+              onClick: () => setShowAddForm(true)
+            }}
+          />
+        ) : (
+          <div className="space-y-4">
+            {memories.map((memory, index) => (
+              <div 
+                key={memory.id} 
+                className={`card animate-slide-up ${
+                  memory.memory_type === 'hard_moment' 
+                    ? 'border-l-4 border-l-purple-400' 
+                    : 'border-l-4 border-l-rose-400'
+                }`}
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <span className={`text-xs font-semibold uppercase tracking-wide ${
+                      memory.memory_type === 'hard_moment' ? 'text-purple-600' : 'text-rose-600'
+                    }`}>
+                      {getMemoryTypeLabel(memory.memory_type)}
+                    </span>
+                    <h3 className="text-lg font-semibold text-gray-800 mt-1">{memory.title}</h3>
+                  </div>
+                  <span className="text-xs text-gray-500 bg-background-secondary px-3 py-1 rounded-full">
+                    {formatDate(memory.memory_date)}
                   </span>
-                  <h3 className="text-lg font-semibold text-gray-800 mt-1">{memory.title}</h3>
                 </div>
-                <span className="text-xs text-gray-500">{formatDate(memory.memory_date)}</span>
-              </div>
-              
-              {memory.description && (
-                <p className="text-gray-600 text-sm mb-4">{memory.description}</p>
-              )}
+                
+                {memory.description && (
+                  <p className="text-gray-600 text-sm mb-4 leading-relaxed">{memory.description}</p>
+                )}
 
-              <div className="flex justify-between items-center">
-                <div className="flex gap-2">
-                  {reactions.map((reaction) => (
-                    <button
-                      key={reaction.type}
-                      className="text-2xl hover:scale-110 transition-transform"
-                      title={reaction.type}
-                    >
-                      {reaction.emoji}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Heart size={16} className="text-red-500" />
-                  <span className="text-sm text-gray-500">+{memory.points} pts</span>
+                <div className="flex justify-between items-center">
+                  <div className="flex gap-2">
+                    {reactions.map((reaction) => (
+                      <button
+                        key={reaction.type}
+                        className="text-2xl hover:scale-110 transition-transform p-1"
+                        title={reaction.type}
+                      >
+                        {reaction.emoji}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Heart size={16} className="text-rose-500" />
+                    <span className="text-sm font-medium text-rose-600">+{memory.points} pts</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

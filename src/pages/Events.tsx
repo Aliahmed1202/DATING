@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getEvents, setEvents } from '../lib/data'
 import { formatDate } from '../lib/utils'
-import BottomNav from '../components/BottomNav'
+import ResponsiveNav from '../components/ResponsiveNav'
 import { Plus, X, Calendar as CalendarIcon, MapPin } from 'lucide-react'
 import { Event } from '../types'
 
@@ -80,9 +80,11 @@ function Events() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
+    <div className="min-h-screen bg-gray-50 md:ml-64">
+      <ResponsiveNav />
+      
+      {/* Mobile Header */}
+      <div className="md:hidden bg-white shadow-sm pt-4">
         <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-xl font-bold text-gray-800">Events</h1>
           <button
@@ -94,7 +96,21 @@ function Events() {
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-6">
+      {/* Desktop Header */}
+      <div className="hidden md:block bg-white shadow-sm">
+        <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-800">Events</h1>
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
+          >
+            <Plus size={20} />
+            Add Event
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Add Event Form */}
         {showAddForm && (
           <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
@@ -230,8 +246,6 @@ function Events() {
           ))}
         </div>
       </div>
-
-      <BottomNav />
     </div>
   )
 }

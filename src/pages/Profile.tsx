@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCurrentUser } from '../lib/auth'
 import { formatDate } from '../lib/utils'
-import BottomNav from '../components/BottomNav'
-import { User, Settings, LogOut, Edit2, Calendar, Mail } from 'lucide-react'
+import ResponsiveNav from '../components/ResponsiveNav'
+import { User, LogOut, Edit2, Calendar, Mail } from 'lucide-react'
 
 function Profile() {
   const navigate = useNavigate()
@@ -41,18 +41,24 @@ function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
+    <div className="min-h-screen bg-gray-50 md:ml-64">
+      <ResponsiveNav />
+      
+      {/* Mobile Header */}
+      <div className="md:hidden bg-white shadow-sm pt-4">
         <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-xl font-bold text-gray-800">Profile</h1>
-          <button className="p-2 hover:bg-gray-100 rounded-full">
-            <Settings size={24} className="text-gray-600" />
-          </button>
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-6">
+      {/* Desktop Header */}
+      <div className="hidden md:block bg-white shadow-sm">
+        <div className="max-w-4xl mx-auto px-6 py-4">
+          <h1 className="text-2xl font-bold text-gray-800">Profile</h1>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Profile Card */}
         <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
           <div className="flex items-center gap-4 mb-6">
@@ -154,8 +160,6 @@ function Profile() {
           Logout
         </button>
       </div>
-
-      <BottomNav />
     </div>
   )
 }

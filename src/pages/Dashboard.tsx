@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { logout } from '../lib/auth'
 import { getRelationshipScore, getMemories } from '../lib/data'
 import { relationship, levels } from '../lib/data'
 import { getDaysTogether, getCurrentLevel, getProgressToNextLevel, formatDate } from '../lib/utils'
-import BottomNav from '../components/BottomNav'
-import { Heart, Calendar, MessageSquare, LogOut, Bell } from 'lucide-react'
+import ResponsiveNav from '../components/ResponsiveNav'
+import { Heart, Calendar, MessageSquare } from 'lucide-react'
 
 function Dashboard() {
   const navigate = useNavigate()
@@ -21,10 +20,6 @@ function Dashboard() {
   const currentLevel = getCurrentLevel(score, levels)
   const { progress, pointsToNext } = getProgressToNextLevel(score, levels)
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
 
   const quickActions = [
     { icon: Heart, label: 'Add Memory', path: '/memories', color: 'text-red-500' },
@@ -33,23 +28,17 @@ function Dashboard() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
+    <div className="min-h-screen bg-gray-50 md:ml-64">
+      <ResponsiveNav />
+      
+      {/* Mobile Header */}
+      <div className="md:hidden bg-white shadow-sm pt-4">
         <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-xl font-bold text-gray-800">Dashboard</h1>
-          <div className="flex gap-2">
-            <button className="p-2 hover:bg-gray-100 rounded-full">
-              <Bell size={24} className="text-gray-600" />
-            </button>
-            <button onClick={handleLogout} className="p-2 hover:bg-gray-100 rounded-full">
-              <LogOut size={24} className="text-gray-600" />
-            </button>
-          </div>
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Main Couple Card */}
         <div className="bg-gradient-to-br from-red-500 to-pink-500 rounded-2xl p-6 text-white shadow-lg">
           <div className="flex items-center gap-4 mb-4">
@@ -139,8 +128,6 @@ function Dashboard() {
           </div>
         </div>
       </div>
-
-      <BottomNav />
     </div>
   )
 }

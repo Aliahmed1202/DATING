@@ -1,0 +1,551 @@
+تمام، لو أول Demo ليك إنت وروما بس، يبقى منعملش system كبير. نعمل نسخة صغيرة بس تحس إنها App حقيقية وتستخدموها فعلًا.
+
+دي **Final First Demo Features**:
+
+# Our Space — First Private Demo
+
+## 1) Login
+
+في النسخة الأولى:
+
+* Login فقط
+* مفيش Sign up عام
+* حساب علي
+* حساب روما
+* Logout
+* حماية الصفحات، يعني محدش يدخل غير لما يعمل login
+
+الحسابات:
+
+```text
+Ali: aliahmesbiso@gmail.com
+Roma: romysaa.samir@icloud.com
+```
+
+---
+
+# 2) Couple Dashboard
+
+دي أهم صفحة.
+
+تظهر فيها:
+
+## Main Couple Card
+
+* Ali & Roma
+* صورة cover
+* صورتي profile ليكوا
+* Relationship type: Dating
+* Main date: 22 February 2025
+* Days together counter
+
+مثال:
+
+```text
+Ali & Roma
+Together since 22 Feb 2025
+Together for X days
+```
+
+## Score Card
+
+* Relationship score
+* Current level
+* Progress bar للـ next level
+
+مثال:
+
+```text
+Level 1 — Our Beginning
+96 / 100 points
+4 points until Level 2
+```
+
+## Individual Scores
+
+* Ali Score
+* Roma Score
+
+مثال:
+
+```text
+Ali: 55 points
+Roma: 41 points
+```
+
+## Quick Actions
+
+Buttons:
+
+* Add Memory
+* Add Event
+* Send Note
+* View Memories
+
+---
+
+# 3) Memories Page
+
+صفحة الذكريات.
+
+## أقسام الذكريات
+
+بدل “Bad Memories”، نخليها ألطف:
+
+### Good Memories
+
+للحاجات الحلوة.
+
+### Moments We Overcame
+
+للحاجات الصعبة اللي عديتوا منها.
+
+في أول Demo ممكن نبدأ بـ Good Memories فقط، بس نخلي الاختيار موجود في الفورم.
+
+## Memory Card
+
+كل memory يظهر فيها:
+
+* Title
+* Date
+* Description مختصر
+* Mood
+* Created by Ali/Roma
+* Reaction
+* Points earned
+
+## Add Memory
+
+الفورم يحتوي على:
+
+* Title
+* Description
+* Memory type:
+
+  * Good
+  * Hard Moment
+* Memory date
+* Mood
+* Photo upload optional
+
+## Demo Memories
+
+نبدأ بالذكريات دي:
+
+1. **First Time We Talked**
+   22 February 2025
+
+2. **Our First Phone Call**
+   6 April 2025
+   “We talked until 7:30 AM”
+
+3. **Our First Cinema Date**
+   4 February 2026
+
+4. **Asked You Out**
+   5 April 2026
+
+5. **Sweet Instagram Message**
+   26 December 2026
+   بس لو التاريخ ده غلط أو مستقبلي مش مقصود، نعدله.
+
+---
+
+# 4) Memory Reactions
+
+كل واحد يقدر يعمل reaction على memory.
+
+Reactions:
+
+```text
+Love
+Emotional
+Funny
+Together
+Special
+```
+
+في الواجهة ممكن تظهر كـ emojis:
+
+```text
+❤️ Love
+🥹 Emotional
+😂 Funny
+🫂 Together
+⭐ Special
+```
+
+لكن في database نخزنها كده:
+
+```text
+love
+emotional
+funny
+together
+special
+```
+
+---
+
+# 5) Events Page
+
+صفحة المناسبات.
+
+## Event Types
+
+* Birthday
+* Anniversary
+* Date
+* Trip
+* Important Day
+* Custom
+
+## Event Card
+
+كل event يظهر فيها:
+
+* Title
+* Type
+* Date
+* Time
+* Location
+* Status:
+
+  * Upcoming
+  * Completed
+  * Cancelled
+
+## Add Event
+
+الفورم يحتوي على:
+
+* Title
+* Event type
+* Date
+* Time
+* Location
+* Description
+* Repeat yearly
+* Status
+
+## Demo Events
+
+نبدأ بـ:
+
+1. **Roma Birthday**
+   24 July 2026
+
+2. **Ali Birthday**
+   19 January 2027
+
+3. **Our Anniversary**
+   22 February 2027
+
+4. **Cinema Date**
+   10 August 2026
+
+---
+
+# 6) Notes
+
+Feature بسيطة بس مهمة جدًا.
+
+## Notes Page
+
+كل واحد يقدر يبعت note للتاني.
+
+Types:
+
+* Love
+* Thank You
+* Appreciation
+* Sorry
+* Miss You
+* Random
+
+## Note Card
+
+* Sender
+* Type
+* Message
+* Date
+* Read / unread
+
+## Add Note
+
+* اختر type
+* اكتب message
+* Send
+
+مثال:
+
+```text
+Thank you for always making the smallest moments feel special.
+```
+
+---
+
+# 7) Relationship Score System
+
+النقاط تتحسب تلقائيًا.
+
+## Actions & Points
+
+| Action          | User Points | Relationship Points |
+| --------------- | ----------: | ------------------: |
+| Add memory      |         +10 |                  +5 |
+| React to memory |          +3 |                  +5 |
+| Add event       |          +8 |                  +5 |
+| Complete event  |         +10 |                 +15 |
+| Send note       |          +5 |                  +3 |
+
+## Important
+
+* النقاط تتحسب من triggers في Supabase.
+* React مايزودش score يدويًا.
+* كل activity لها score log.
+* نفس reaction مايتحسبش مرتين.
+
+---
+
+# 8) Levels
+
+نبدأ بـ 5 levels:
+
+## Level 1 — Our Beginning
+
+```text
+0 - 99 points
+```
+
+## Level 2 — Getting Closer
+
+```text
+100 - 249 points
+```
+
+## Level 3 — Strong Bond
+
+```text
+250 - 499 points
+```
+
+## Level 4 — Growing Together
+
+```text
+500 - 999 points
+```
+
+## Level 5 — Our World
+
+```text
+1000+ points
+```
+
+في أول Demo مش لازم نقفل features حسب level.
+نخلي كل حاجة مفتوحة، بس نعرض level وprogress.
+
+---
+
+# 9) Gallery
+
+في أول Demo نخليها بسيطة:
+
+* تعرض كل صور الذكريات
+* لو مفيش صور، تعرض empty state لطيف
+* الضغط على الصورة يفتح الـmemory الخاصة بيها
+
+لو الصورة هتأخرنا، ممكن نخلي Gallery في Future Work ونبدأ بالـupload داخل memory فقط.
+
+---
+
+# 10) Notifications داخل التطبيق
+
+مش Push Notifications.
+
+بس Notification Center بسيط:
+
+* Roma added a new memory
+* Ali reacted to your memory
+* Roma sent you a note
+* Level up
+* New event added
+
+كل notification فيها:
+
+* Title
+* Message
+* Read / unread
+* Time
+
+---
+
+# 11) Profile Page
+
+لكل واحد:
+
+* Full name
+* Nickname
+* Birth date
+* Avatar
+* Email
+* Member score
+* Edit profile
+
+في أول Demo:
+
+* edit nickname
+* edit avatar
+* edit birth date
+
+---
+
+# 12) Settings Page
+
+بسيطة جدًا:
+
+* Relationship info
+
+  * name
+  * start date
+  * cover photo
+* Logout
+* Theme later
+
+في أول Demo نخلي تعديل العلاقة optional.
+
+---
+
+# 13) Pages النهائية لأول Demo
+
+دي الصفحات المطلوبة:
+
+```text
+/login
+/dashboard
+/memories
+/memories/new
+/memories/:id
+/events
+/events/new
+/notes
+/notifications
+/profile
+/settings
+```
+
+ولو عايزين نقلل أكتر:
+
+```text
+/login
+/dashboard
+/memories
+/events
+/notes
+/profile
+```
+
+---
+
+# 14) Bottom Navigation
+
+عشان تحس إنها mobile app:
+
+```text
+Home
+Memories
++
+Events
+Profile
+```
+
+زرار `+` يفتح:
+
+```text
+Add Memory
+Add Event
+Send Note
+```
+
+---
+
+# 15) Features مش داخلة في أول Demo
+
+دي نخليها Future Work:
+
+* Public sign up
+* Invite partner by link
+* Multiple couples
+* Chat
+* AI messages
+* Date request system
+* Challenges
+* Bucket list
+* Yearly recap
+* PDF memory book
+* Mobile app
+* Payment system
+* Admin panel
+
+---
+
+# 16) First Demo Scope النهائي
+
+النسخة الأولى تكون:
+
+```text
+Private web app for Ali and Roma only.
+
+It includes login, couple dashboard, memories, reactions,
+events, notes, scores, levels, notifications, and profile settings.
+```
+
+يعني بالبلدي:
+
+**أول نسخة تعملوها وتستخدموها فعلًا، بس من غير تعقيد startup كامل.**
+
+# 17) ترتيب التنفيذ
+
+ابدأوا كده:
+
+## Step 1
+
+Login + Supabase connection
+
+## Step 2
+
+Fetch relationship data
+
+## Step 3
+
+Dashboard
+
+## Step 4
+
+Memories list + add memory
+
+## Step 5
+
+Reactions
+
+## Step 6
+
+Events list + add event
+
+## Step 7
+
+Notes
+
+## Step 8
+
+Notifications
+
+## Step 9
+
+Profile
+
+## Step 10
+
+Deploy on Vercel
+
+دي كده أول demo قوية جدًا ومناسبة ليكوا إنتوا الاتنين بس.

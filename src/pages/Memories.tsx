@@ -6,13 +6,19 @@ import ResponsiveNav from '../components/ResponsiveNav'
 import PageHeader from '../components/PageHeader'
 import EmptyState from '../components/EmptyState'
 import { FormInput, FormTextarea } from '../components/FormInput'
+import MediaUpload from '../components/MediaUpload'
+import MediaGallery from '../components/MediaGallery'
 import { Heart, Plus, X, Star } from 'lucide-react'
 import { Memory } from '../types'
+import { MediaFile } from '../lib/storage'
 
 function Memories() {
   const user = getCurrentUser()
   const [memories, setMemoriesState] = useState<Memory[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [newMemory, setNewMemory] = useState({
     title: '',
     description: '',
@@ -25,11 +31,33 @@ function Memories() {
     setMemoriesState(getMemories())
   }, [])
 
-  const handleAddMemory = (e: React.FormEvent) => {
+  const handleAddMemory = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    setIsUploading(true)
+    setUploadProgress(0)
+
+    const memoryId = `mem-${Date.now()}`
+    
+    // Upload media files if any
+    let uploadedMedia: any[] = []
+    if (mediaFiles.length > 0) {
+      try {
+        const { uploadMultipleMediaFiles } = await import('../lib/storage')
+        uploadedMedia = await uploadMultipleMediaFiles(
+          mediaFiles.map(f => f.file),
+          user?.id || '',
+          memoryId,
+          'memory',
+          (progress) => setUploadProgress(progress)
+        )
+      } catch (error) {
+        console.error('Failed to upload media:', error)
+      }
+    }
+
     const memory: Memory = {
-      id: `mem-${Date.now()}`,
+      id: memoryId,
       title: newMemory.title,
       description: newMemory.description,
       memory_type: newMemory.memory_type,
@@ -39,6 +67,7 @@ function Memories() {
       created_by: user?.id || '',
       created_at: new Date().toISOString(),
       points: 10,
+      media: uploadedMedia
     }
 
     const updatedMemories = [memory, ...memories]
@@ -55,7 +84,9 @@ function Memories() {
       localStorage.setItem('currentUser', JSON.stringify(user))
     }
 
+    setIsUploading(false)
     setShowAddForm(false)
+    setMediaFiles([])
     setNewMemory({
       title: '',
       description: '',
@@ -169,8 +200,33 @@ function Memories() {
                   <option value="grateful">Grateful</option>
                 </select>
               </div>
-              <button type="submit" className="btn-primary w-full">
-                Save Memory
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Photos & Videos</label>
+                <MediaUpload 
+                  mediaFiles={mediaFiles}
+                  onMediaChange={setMediaFiles}
+                  maxFiles={10}
+                />
+              </div>
+
+              {isUploading && (
+                <div className="p-4 bg-rose-50 rounded-2xl">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-rose-700">Uploading media...</span>
+                    <span className="text-sm text-rose-600">{Math.round(uploadProgress)}%</span>
+                  </div>
+                  <div className="w-full bg-rose-200 rounded-full h-2">
+                    <div 
+                      className="bg-rose-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <button type="submit" className="btn-primary w-full" disabled={isUploading}>
+                {isUploading ? 'Uploading...' : 'Save Memory'}
               </button>
             </form>
           </div>
@@ -215,6 +271,12 @@ function Memories() {
                 
                 {memory.description && (
                   <p className="text-gray-600 text-sm mb-4 leading-relaxed">{memory.description}</p>
+                )}
+
+                {memory.media && memory.media.length > 0 && (
+                  <div className="mb-4">
+                    <MediaGallery media={memory.media} />
+                  </div>
                 )}
 
                 <div className="flex justify-between items-center">

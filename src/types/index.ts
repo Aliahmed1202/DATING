@@ -28,6 +28,7 @@ export interface Memory {
   created_by: string
   created_at: string
   points: number
+  media?: Media[]
 }
 
 export interface MemoryReaction {
@@ -49,6 +50,7 @@ export interface Event {
   repeat_yearly: boolean
   status: 'upcoming' | 'completed' | 'cancelled'
   created_at: string
+  media?: Media[]
 }
 
 export interface Note {
@@ -74,4 +76,16 @@ export interface Level {
   name: string
   min_points: number
   max_points: number
+}
+
+export interface Media {
+  id: string
+  parent_id: string
+  parent_type: 'memory' | 'event'
+  type: 'image' | 'video'
+  url: string
+  file_path: string
+  name: string
+  size: number
+  created_at: string
 }

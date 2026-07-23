@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCurrentUser } from '../lib/auth'
 import { formatDate } from '../lib/utils'
@@ -12,7 +12,7 @@ import { MediaFile } from '../lib/storage'
 
 function Profile() {
   const navigate = useNavigate()
-  const user = getCurrentUser()
+  const [user, setUser] = useState(getCurrentUser())
   const [isEditing, setIsEditing] = useState(false)
   const [avatarFiles, setAvatarFiles] = useState<MediaFile[]>([])
   const [isUploading, setIsUploading] = useState(false)
@@ -21,6 +21,16 @@ function Profile() {
     nickname: user?.nickname || '',
     birth_date: user?.birth_date || '',
   })
+
+  // Update user when localStorage changes
+  useEffect(() => {
+    const handleUserUpdate = () => {
+      setUser(getCurrentUser())
+    }
+    
+    window.addEventListener('user-updated', handleUserUpdate)
+    return () => window.removeEventListener('user-updated', handleUserUpdate)
+  }, [])
 
   const handleLogout = () => {
     localStorage.removeItem('currentUser')
@@ -45,6 +55,7 @@ function Profile() {
           )
           if (uploadedMedia.length > 0) {
             user.avatar = uploadedMedia[0].url
+            setUser({ ...user, avatar: uploadedMedia[0].url })
           }
         } catch (error) {
           console.error('Failed to upload avatar:', error)

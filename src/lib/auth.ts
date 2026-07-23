@@ -1,62 +1,54 @@
 import { supabase } from './supabase'
 import type { User } from '../types'
 
-// The two allowed emails for this private app
-const ALLOWED_EMAILS = ['aliahmesbiso@gmail.com', 'romysaa.samir@icloud.com']
-
-// Map email → display name (used when creating profile on first login)
+// Map email → display name
 const NAME_MAP: Record<string, { name: string; nickname: string; birth_date: string }> = {
   'aliahmesbiso@gmail.com': { name: 'Ali', nickname: 'Ali', birth_date: '2006-01-19' },
   'romysaa.samir@icloud.com': { name: 'Roma', nickname: 'Roma', birth_date: '2006-07-24' },
 }
 
 /**
- * Sign in with email OTP (magic link / 6-digit code).
- * Supabase sends a one-time code to the user's email.
+ * Sign in with email + password.
+ * If the account doesn't exist yet, it is created automatically (first-time setup).
  */
-export async function login(email: string): Promise<void> {
+export async function login(email: string, password: string): Promise<User> {
   const normalised = email.trim().toLowerCase()
 
-  if (!ALLOWED_EMAILS.includes(normalised)) {
+  if (!NAME_MAP[normalised]) {
     throw new Error('Invalid email. Please use your registered account.')
   }
 
-  const meta = NAME_MAP[normalised]
-
-  const { error } = await supabase.auth.signInWithOtp({
+  // Try sign-in first
+  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
     email: normalised,
-    options: {
-      shouldCreateUser: true,
-      data: {
-        name: meta.name,
-        nickname: meta.nickname,
-      },
-    },
+    password,
   })
 
-  if (error) throw new Error(error.message)
-}
-
-/**
- * Verify the OTP code sent to the user's email.
- * Returns the full User profile on success.
- */
-export async function verifyOtp(email: string, token: string): Promise<User> {
-  const { data, error } = await supabase.auth.verifyOtp({
-    email: email.trim().toLowerCase(),
-    token,
-    type: 'email',
-  })
-
-  if (error || !data.user) {
-    throw new Error(error?.message || 'Invalid or expired code.')
+  if (!signInError && signInData.user) {
+    await ensureProfile(signInData.user.id, normalised)
+    return getProfileById(signInData.user.id)
   }
 
-  // Ensure profile row exists (trigger handles it, but race-condition safety)
-  await ensureProfile(data.user.id, data.user.email!)
+  // If "Invalid login credentials" it might be a first-time user — try sign-up
+  if (signInError?.message?.toLowerCase().includes('invalid login credentials')) {
+    const meta = NAME_MAP[normalised]
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: normalised,
+      password,
+      options: {
+        data: { name: meta.name, nickname: meta.nickname },
+      },
+    })
 
-  const profile = await getProfileById(data.user.id)
-  return profile
+    if (signUpError || !signUpData.user) {
+      throw new Error(signUpError?.message || 'Failed to create account.')
+    }
+
+    await ensureProfile(signUpData.user.id, normalised)
+    return getProfileById(signUpData.user.id)
+  }
+
+  throw new Error(signInError?.message || 'Login failed.')
 }
 
 /**
@@ -82,7 +74,7 @@ export async function logout(): Promise<void> {
 }
 
 /**
- * Fetch a profile row by user id and return it as a User object.
+ * Fetch a profile row by user id.
  */
 export async function getProfileById(userId: string): Promise<User> {
   const { data, error } = await supabase
@@ -132,7 +124,7 @@ export async function updateProfile(
 }
 
 /**
- * Internal: create profile row if it doesn't exist yet.
+ * Internal: upsert profile row on first login.
  */
 async function ensureProfile(userId: string, email: string): Promise<void> {
   const meta = NAME_MAP[email.toLowerCase()]

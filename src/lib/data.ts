@@ -16,7 +16,7 @@ export const levels: Level[] = [
 // RELATIONSHIP (derived from memories + events)
 // ============================================================
 export async function getRelationship(): Promise<Relationship> {
-  const startDate = await calculateRelationshipStartDate()
+  const startDate = '2025-02-22'
   const score = await calculateRelationshipScore()
   return {
     id: 'rel-1',
@@ -29,22 +29,11 @@ export async function getRelationship(): Promise<Relationship> {
 }
 
 export async function calculateRelationshipStartDate(): Promise<string> {
-  const [{ data: memories }, { data: events }] = await Promise.all([
-    supabase.from('memories').select('created_at').order('created_at', { ascending: true }).limit(1),
-    supabase.from('events').select('created_at').order('created_at', { ascending: true }).limit(1),
-  ])
-
-  const dates: string[] = []
-  if (memories?.[0]?.created_at) dates.push(memories[0].created_at)
-  if (events?.[0]?.created_at) dates.push(events[0].created_at)
-
-  if (dates.length === 0) return new Date().toISOString()
-  return dates.sort()[0]
+  return '2025-02-22'
 }
 
 export async function calculateDaysTogether(): Promise<number> {
-  const startDate = await calculateRelationshipStartDate()
-  const start = new Date(startDate)
+  const start = new Date('2025-02-22')
   const now = new Date()
   const diffTime = Math.abs(now.getTime() - start.getTime())
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24))

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login } from '../lib/auth'
 import { Heart } from 'lucide-react'
@@ -8,11 +9,21 @@ const ACCOUNTS = [
 ]
 
 function Login() {
+  const [loadingKey, setLoadingKey] = useState<string | null>(null)
+  const [error, setError] = useState('')
   const navigate = useNavigate()
 
-  const handleSelect = (key: 'ali' | 'roma') => {
-    login(key)
-    navigate('/dashboard')
+  const handleSelect = async (key: 'ali' | 'roma') => {
+    setError('')
+    setLoadingKey(key)
+    try {
+      await login(key)
+      navigate('/dashboard')
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong. Please try again.')
+    } finally {
+      setLoadingKey(null)
+    }
   }
 
   return (
@@ -28,19 +39,30 @@ function Login() {
         </div>
 
         <div className="space-y-4">
-          {ACCOUNTS.map((account) => (
-            <button
-              key={account.key}
-              onClick={() => handleSelect(account.key)}
-              className="w-full flex items-center gap-4 p-5 rounded-2xl border-2 border-gray-100 hover:border-red-300 hover:bg-red-50 transition-all duration-200 active:scale-95"
-            >
-              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${account.color} flex items-center justify-center text-white text-2xl font-bold shadow-sm flex-shrink-0`}>
-                {account.initial}
-              </div>
-              <p className="text-xl font-semibold text-gray-800">{account.name}</p>
-            </button>
-          ))}
+          {ACCOUNTS.map((account) => {
+            const isLoading = loadingKey === account.key
+            return (
+              <button
+                key={account.key}
+                onClick={() => handleSelect(account.key)}
+                disabled={loadingKey !== null}
+                className="w-full flex items-center gap-4 p-5 rounded-2xl border-2 border-gray-100 hover:border-red-300 hover:bg-red-50 transition-all duration-200 active:scale-95 disabled:opacity-60"
+              >
+                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${account.color} flex items-center justify-center text-white text-2xl font-bold shadow-sm flex-shrink-0`}>
+                  {isLoading
+                    ? <div className="w-6 h-6 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    : account.initial
+                  }
+                </div>
+                <p className="text-xl font-semibold text-gray-800">{account.name}</p>
+              </button>
+            )
+          })}
         </div>
+
+        {error && (
+          <div className="mt-4 bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">{error}</div>
+        )}
 
         <div className="mt-8 text-center text-sm text-gray-400">
           Private space for Ali & Roma

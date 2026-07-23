@@ -1,27 +1,39 @@
 import { supabase } from './supabase'
 import type { User } from '../types'
 
-// Map email → display name
-const NAME_MAP: Record<string, { name: string; nickname: string; birth_date: string }> = {
-  'aliahmesbiso@gmail.com': { name: 'Ali', nickname: 'Ali', birth_date: '2006-01-19' },
-  'romysaa.samir@icloud.com': { name: 'Roma', nickname: 'Roma', birth_date: '2006-07-24' },
+// Fixed internal passwords — users never see or type these
+const ACCOUNTS: Record<string, { name: string; nickname: string; birth_date: string; password: string }> = {
+  'aliahmesbiso@gmail.com': {
+    name: 'Ali',
+    nickname: 'Ali',
+    birth_date: '2006-01-19',
+    password: 'ali-roma-app-2024!',
+  },
+  'romysaa.samir@icloud.com': {
+    name: 'Roma',
+    nickname: 'Roma',
+    birth_date: '2006-07-24',
+    password: 'roma-ali-app-2024!',
+  },
 }
 
 /**
- * Sign in with email + password.
- * If the account doesn't exist yet, it is created automatically (first-time setup).
+ * One-tap login — user just picks their name, no password input.
+ * Uses a fixed internal password behind the scenes.
+ * Creates the Supabase account automatically on first use.
  */
-export async function login(email: string, password: string): Promise<User> {
+export async function login(email: string): Promise<User> {
   const normalised = email.trim().toLowerCase()
+  const account = ACCOUNTS[normalised]
 
-  if (!NAME_MAP[normalised]) {
-    throw new Error('Invalid email. Please use your registered account.')
+  if (!account) {
+    throw new Error('Invalid account.')
   }
 
-  // Try sign-in first
+  // Try sign in first
   const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
     email: normalised,
-    password,
+    password: account.password,
   })
 
   if (!signInError && signInData.user) {
@@ -29,14 +41,13 @@ export async function login(email: string, password: string): Promise<User> {
     return getProfileById(signInData.user.id)
   }
 
-  // If "Invalid login credentials" it might be a first-time user — try sign-up
+  // First time — create the account
   if (signInError?.message?.toLowerCase().includes('invalid login credentials')) {
-    const meta = NAME_MAP[normalised]
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: normalised,
-      password,
+      password: account.password,
       options: {
-        data: { name: meta.name, nickname: meta.nickname },
+        data: { name: account.name, nickname: account.nickname },
       },
     })
 
@@ -127,16 +138,16 @@ export async function updateProfile(
  * Internal: upsert profile row on first login.
  */
 async function ensureProfile(userId: string, email: string): Promise<void> {
-  const meta = NAME_MAP[email.toLowerCase()]
-  if (!meta) return
+  const account = ACCOUNTS[email.toLowerCase()]
+  if (!account) return
 
   await supabase.from('profiles').upsert(
     {
       id: userId,
       email,
-      name: meta.name,
-      nickname: meta.nickname,
-      birth_date: meta.birth_date,
+      name: account.name,
+      nickname: account.nickname,
+      birth_date: account.birth_date,
     },
     { onConflict: 'id', ignoreDuplicates: true }
   )

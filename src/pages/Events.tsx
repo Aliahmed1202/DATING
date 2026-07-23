@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getEvents, insertEvent, updateEvent, deleteEvent, syncUserScore } from '../lib/data'
+import { getEvents, insertEvent, updateEvent, deleteEvent, syncUserScore, getPartnerProfiles } from '../lib/data'
 import { formatDate } from '../lib/utils'
 import ResponsiveNav from '../components/ResponsiveNav'
 import PageHeader from '../components/PageHeader'
@@ -14,6 +14,7 @@ import { getCurrentUser } from '../lib/auth'
 
 function Events() {
   const [user, setUser] = useState<any>(null)
+  const [partnerName, setPartnerName] = useState('your partner')
   const [events, setEvents] = useState<Event[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingEventId, setEditingEventId] = useState<string | null>(null)
@@ -33,7 +34,13 @@ function Events() {
   })
 
   useEffect(() => {
-    getCurrentUser().then(setUser)
+    getCurrentUser().then(async (u) => {
+      setUser(u)
+      if (u) {
+        const partners = await getPartnerProfiles(u.id)
+        if (partners.length > 0) setPartnerName(partners[0].name)
+      }
+    })
     loadEvents()
   }, [])
 
@@ -354,7 +361,7 @@ function Events() {
                         </span>
                         <h3 className="text-lg font-semibold text-gray-800 mt-1">{event.title}</h3>
                         <p className="text-xs text-gray-500 mt-1">
-                          Created by {event.created_by === user?.id ? 'you' : 'your partner'}
+                          Created by {event.created_by === user?.id ? 'you' : partnerName}
                         </p>
                       </div>
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(event.status)}`}>

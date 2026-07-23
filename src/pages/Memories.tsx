@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getMemories, insertMemory, updateMemory, deleteMemory, syncUserScore } from '../lib/data'
+import { getMemories, insertMemory, updateMemory, deleteMemory, syncUserScore, getPartnerProfiles } from '../lib/data'
 import { getCurrentUser } from '../lib/auth'
 import { formatDate } from '../lib/utils'
 import ResponsiveNav from '../components/ResponsiveNav'
@@ -14,6 +14,7 @@ import { MediaFile, uploadMultipleMediaFiles } from '../lib/storage'
 
 function Memories() {
   const [user, setUser] = useState<any>(null)
+  const [partnerName, setPartnerName] = useState('your partner')
   const [memories, setMemoriesState] = useState<Memory[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingMemoryId, setEditingMemoryId] = useState<string | null>(null)
@@ -30,7 +31,13 @@ function Memories() {
   })
 
   useEffect(() => {
-    getCurrentUser().then(setUser)
+    getCurrentUser().then(async (u) => {
+      setUser(u)
+      if (u) {
+        const partners = await getPartnerProfiles(u.id)
+        if (partners.length > 0) setPartnerName(partners[0].name)
+      }
+    })
     loadMemories()
   }, [])
 
@@ -306,7 +313,7 @@ function Memories() {
                     </span>
                     <h3 className="text-lg font-semibold text-gray-800 mt-1">{memory.title}</h3>
                     <p className="text-xs text-gray-500 mt-1">
-                      Created by {memory.created_by === user?.id ? 'you' : 'your partner'}
+                      Created by {memory.created_by === user?.id ? 'you' : partnerName}
                     </p>
                   </div>
                   <span className="text-xs text-gray-500 bg-background-secondary px-3 py-1 rounded-full">

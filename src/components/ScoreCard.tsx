@@ -1,17 +1,28 @@
 import { levels } from '../lib/data'
 import { getCurrentLevel, getProgressToNextLevel } from '../lib/utils'
 
+interface ProfileScore {
+  id: string
+  name: string
+  avatar: string | null
+  score: number
+}
+
 interface ScoreCardProps {
   score: number
   showIndividual?: boolean
-  aliScore?: number
-  romaScore?: number
+  profiles?: ProfileScore[]
 }
 
-function ScoreCard({ score, showIndividual = false, aliScore = 0, romaScore = 0 }: ScoreCardProps) {
+function ScoreCard({ score, showIndividual = false, profiles = [] }: ScoreCardProps) {
   const currentLevel = getCurrentLevel(score, levels)
   const { progress, pointsToNext } = getProgressToNextLevel(score, levels)
   const levelIndex = levels.indexOf(currentLevel)
+
+  const colors = [
+    { bg: 'from-peach-400 to-coral-400', score: 'text-rose-600' },
+    { bg: 'from-coral-400 to-rose-400', score: 'text-purple-600' },
+  ]
 
   return (
     <div className="card animate-slide-up">
@@ -25,7 +36,7 @@ function ScoreCard({ score, showIndividual = false, aliScore = 0, romaScore = 0 
       <div className="mb-4">
         <div className="flex justify-between text-sm mb-2">
           <span className="text-gray-600 font-medium">{currentLevel.name}</span>
-          <span className="font-bold text-gray-800">{score} / {currentLevel.max_points} points</span>
+          <span className="font-bold text-gray-800">{score} / {currentLevel.max_points === Infinity ? '∞' : currentLevel.max_points} points</span>
         </div>
         <div className="w-full bg-background-secondary rounded-full h-3 overflow-hidden">
           <div
@@ -37,26 +48,27 @@ function ScoreCard({ score, showIndividual = false, aliScore = 0, romaScore = 0 
 
       <p className="text-sm text-gray-500">{pointsToNext} points until next level</p>
 
-      {showIndividual && (
+      {showIndividual && profiles.length > 0 && (
         <div className="mt-6 pt-6 border-t border-soft space-y-3">
-          <div className="flex justify-between items-center p-4 bg-background-secondary rounded-2xl">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-peach-400 to-coral-400 rounded-full flex items-center justify-center text-white font-bold">
-                A
+          {profiles.map((profile, i) => (
+            <div key={profile.id} className="flex justify-between items-center p-4 bg-background-secondary rounded-2xl">
+              <div className="flex items-center gap-3">
+                {profile.avatar ? (
+                  <img
+                    src={profile.avatar}
+                    alt={profile.name}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className={`w-10 h-10 bg-gradient-to-br ${colors[i % 2].bg} rounded-full flex items-center justify-center text-white font-bold`}>
+                    {profile.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="font-medium text-gray-700">{profile.name}</span>
               </div>
-              <span className="font-medium text-gray-700">Ali</span>
+              <span className={`font-bold text-lg ${colors[i % 2].score}`}>{profile.score}</span>
             </div>
-            <span className="font-bold text-rose-600 text-lg">{aliScore}</span>
-          </div>
-          <div className="flex justify-between items-center p-4 bg-background-secondary rounded-2xl">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-coral-400 to-rose-400 rounded-full flex items-center justify-center text-white font-bold">
-                R
-              </div>
-              <span className="font-medium text-gray-700">Roma</span>
-            </div>
-            <span className="font-bold text-purple-600 text-lg">{romaScore}</span>
-          </div>
+          ))}
         </div>
       )}
     </div>

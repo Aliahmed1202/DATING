@@ -15,6 +15,7 @@ import MediaGallery from '../components/MediaGallery'
 function Notes() {
   const [user, setUser] = useState<any>(null)
   const [partnerId, setPartnerId] = useState<string | null>(null)
+  const [partnerName, setPartnerName] = useState('your partner')
   const [notes, setNotesState] = useState<Note[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
@@ -32,7 +33,10 @@ function Notes() {
       setUser(u)
       if (u) {
         const partners = await getPartnerProfiles(u.id)
-        if (partners.length > 0) setPartnerId(partners[0].id)
+        if (partners.length > 0) {
+          setPartnerId(partners[0].id)
+          setPartnerName(partners[0].name)
+        }
       }
     })
     loadNotes()
@@ -277,7 +281,7 @@ function Notes() {
                           {getNoteTypeLabel(note.type)}
                         </span>
                         <p className="text-sm text-gray-500 mt-1">
-                          {isMyNote(note) ? 'From you' : 'From your partner'}
+                          {isMyNote(note) ? 'From you' : `From ${partnerName}`}
                         </p>
                       </div>
                       <span className="text-xs text-gray-400">{formatDate(note.created_at)}</span>

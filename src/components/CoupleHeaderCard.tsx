@@ -2,15 +2,41 @@ import { useState, useEffect } from 'react'
 import { Heart } from 'lucide-react'
 import { formatDate } from '../lib/utils'
 import { getRelationship, calculateDaysTogether } from '../lib/data'
-import type { Relationship } from '../types'
+import { supabase } from '../lib/supabase'
+import type { Relationship, User } from '../types'
+
+function Avatar({ user }: { user: User }) {
+  if (user.avatar) {
+    return (
+      <img
+        src={user.avatar}
+        alt={user.name}
+        className="w-16 h-16 rounded-full object-cover border-4 border-white/50"
+      />
+    )
+  }
+  return (
+    <div className="w-16 h-16 bg-white/30 rounded-full flex items-center justify-center border-4 border-white/50 backdrop-blur-sm">
+      <span className="text-2xl font-bold">{user.name.charAt(0).toUpperCase()}</span>
+    </div>
+  )
+}
 
 function CoupleHeaderCard() {
   const [relationship, setRelationship] = useState<Relationship | null>(null)
   const [daysTogether, setDaysTogether] = useState(0)
+  const [profiles, setProfiles] = useState<User[]>([])
 
   useEffect(() => {
     getRelationship().then(setRelationship)
     calculateDaysTogether().then(setDaysTogether)
+
+    supabase
+      .from('profiles')
+      .select('id, name, nickname, avatar, email, birth_date, score')
+      .then(({ data }) => {
+        if (data) setProfiles(data as User[])
+      })
   }, [])
 
   if (!relationship) {
@@ -19,19 +45,32 @@ function CoupleHeaderCard() {
     )
   }
 
+  const coupleLabel = profiles.length >= 2
+    ? `${profiles[0].name} & ${profiles[1].name}`
+    : relationship.name
+
   return (
     <div className="bg-gradient-to-br from-peach-400 via-coral-400 to-rose-400 rounded-3xl p-6 md:p-8 text-white shadow-soft-lg animate-fade-in">
       <div className="flex items-center gap-4 mb-6">
         <div className="flex -space-x-4">
-          <div className="w-16 h-16 bg-white/30 rounded-full flex items-center justify-center border-4 border-white/50 backdrop-blur-sm">
-            <span className="text-2xl font-bold">A</span>
-          </div>
-          <div className="w-16 h-16 bg-white/30 rounded-full flex items-center justify-center border-4 border-white/50 backdrop-blur-sm">
-            <span className="text-2xl font-bold">R</span>
-          </div>
+          {profiles.length >= 2 ? (
+            <>
+              <Avatar user={profiles[0]} />
+              <Avatar user={profiles[1]} />
+            </>
+          ) : (
+            <>
+              <div className="w-16 h-16 bg-white/30 rounded-full flex items-center justify-center border-4 border-white/50 backdrop-blur-sm">
+                <span className="text-2xl font-bold">A</span>
+              </div>
+              <div className="w-16 h-16 bg-white/30 rounded-full flex items-center justify-center border-4 border-white/50 backdrop-blur-sm">
+                <span className="text-2xl font-bold">R</span>
+              </div>
+            </>
+          )}
         </div>
         <div className="flex-1">
-          <h2 className="text-2xl md:text-3xl font-bold">{relationship.name}</h2>
+          <h2 className="text-2xl md:text-3xl font-bold">{coupleLabel}</h2>
           <p className="text-white/90 text-sm md:text-base">{relationship.type}</p>
         </div>
         <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-3">

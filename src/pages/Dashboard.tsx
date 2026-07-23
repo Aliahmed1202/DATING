@@ -8,16 +8,11 @@ import CoupleHeaderCard from '../components/CoupleHeaderCard'
 import ScoreCard from '../components/ScoreCard'
 import { Heart, Calendar, MessageSquare } from 'lucide-react'
 
-// Known user IDs — same as hardcoded in auth.ts NAME_MAP via profile creation
-const ALI_EMAIL = 'aliahmesbiso@gmail.com'
-const ROMA_EMAIL = 'romysaa.samir@icloud.com'
-
 function Dashboard() {
   const navigate = useNavigate()
   const [score, setScore] = useState(0)
   const [memories, setMemories] = useState<any[]>([])
-  const [aliScore, setAliScore] = useState(0)
-  const [romaScore, setRomaScore] = useState(0)
+  const [profileScores, setProfileScores] = useState<{ id: string; name: string; avatar: string | null; score: number }[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -30,20 +25,21 @@ function Dashboard() {
         setMemories(mems)
         setScore(relScore)
 
-        // Fetch both profiles to get their IDs for individual scores
+        // Fetch all profiles and compute each person's individual score
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, email')
+          .select('id, name, avatar')
 
-        if (profiles) {
-          const ali = profiles.find((p: any) => p.email === ALI_EMAIL)
-          const roma = profiles.find((p: any) => p.email === ROMA_EMAIL)
-          const [aScore, rScore] = await Promise.all([
-            ali ? calculateUserScore(ali.id) : Promise.resolve(0),
-            roma ? calculateUserScore(roma.id) : Promise.resolve(0),
-          ])
-          setAliScore(aScore)
-          setRomaScore(rScore)
+        if (profiles && profiles.length > 0) {
+          const withScores = await Promise.all(
+            profiles.map(async (p: any) => ({
+              id: p.id,
+              name: p.name,
+              avatar: p.avatar ?? null,
+              score: await calculateUserScore(p.id),
+            }))
+          )
+          setProfileScores(withScores)
         }
       } catch (err) {
         console.error('Dashboard load error:', err)
@@ -69,7 +65,7 @@ function Dashboard() {
         <CoupleHeaderCard />
 
         {/* Score Card */}
-        <ScoreCard score={score} showIndividual={true} aliScore={aliScore} romaScore={romaScore} />
+        <ScoreCard score={score} showIndividual={true} profiles={profileScores} />
 
         {/* Quick Actions */}
         <div className="card animate-slide-up" style={{ animationDelay: '0.1s' }}>

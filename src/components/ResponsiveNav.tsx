@@ -4,11 +4,30 @@ import { cn } from '../lib/utils'
 import { logout } from '../lib/auth'
 import { useNavigate } from 'react-router-dom'
 import { getCurrentUser } from '../lib/auth'
+import { useState, useEffect } from 'react'
 
 function ResponsiveNav() {
   const location = useLocation()
   const navigate = useNavigate()
-  const user = getCurrentUser()
+  const [user, setUser] = useState(getCurrentUser())
+
+  // Update user when localStorage changes or custom event
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setUser(getCurrentUser())
+    }
+    
+    const handleUserUpdate = () => {
+      setUser(getCurrentUser())
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('user-updated', handleUserUpdate)
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('user-updated', handleUserUpdate)
+    }
+  }, [])
 
   const navItems = [
     { path: '/dashboard', icon: Home, label: 'Home' },

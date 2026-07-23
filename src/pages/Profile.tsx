@@ -54,6 +54,10 @@ function Profile() {
       user.nickname = editedUser.nickname
       user.birth_date = editedUser.birth_date
       localStorage.setItem('currentUser', JSON.stringify(user))
+      
+      // Dispatch event to notify other components of user update
+      window.dispatchEvent(new Event('user-updated'))
+      
       setIsUploading(false)
       setIsEditing(false)
       setAvatarFiles([])

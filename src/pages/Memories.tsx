@@ -308,6 +308,9 @@ function Memories() {
                       {getMemoryTypeLabel(memory.memory_type)}
                     </span>
                     <h3 className="text-lg font-semibold text-gray-800 mt-1">{memory.title}</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Created by {memory.created_by === user?.id ? 'you' : 'your partner'}
+                    </p>
                   </div>
                   <span className="text-xs text-gray-500 bg-background-secondary px-3 py-1 rounded-full">
                     {formatDate(memory.memory_date)}

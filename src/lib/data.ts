@@ -79,6 +79,7 @@ export const demoEvents: Event[] = [
     description: null,
     repeat_yearly: true,
     status: 'upcoming',
+    created_by: 'ali-user-id',
     created_at: '2025-02-22T00:00:00Z',
   },
   {
@@ -91,6 +92,7 @@ export const demoEvents: Event[] = [
     description: null,
     repeat_yearly: true,
     status: 'upcoming',
+    created_by: 'roma-user-id',
     created_at: '2025-02-22T00:00:00Z',
   },
   {
@@ -103,6 +105,7 @@ export const demoEvents: Event[] = [
     description: null,
     repeat_yearly: true,
     status: 'upcoming',
+    created_by: 'ali-user-id',
     created_at: '2025-02-22T00:00:00Z',
   },
   {
@@ -115,6 +118,7 @@ export const demoEvents: Event[] = [
     description: null,
     repeat_yearly: false,
     status: 'upcoming',
+    created_by: 'ali-user-id',
     created_at: '2025-02-22T00:00:00Z',
   },
 ]

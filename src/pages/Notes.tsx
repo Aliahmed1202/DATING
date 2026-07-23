@@ -6,13 +6,20 @@ import ResponsiveNav from '../components/ResponsiveNav'
 import PageHeader from '../components/PageHeader'
 import EmptyState from '../components/EmptyState'
 import { FormTextarea } from '../components/FormInput'
-import { Plus, X, MessageSquare, Sparkles } from 'lucide-react'
+import { Plus, X, MessageSquare, Sparkles, Edit2, Trash2 } from 'lucide-react'
 import { Note } from '../types'
+import { MediaFile } from '../lib/storage'
+import MediaUpload from '../components/MediaUpload'
+import MediaGallery from '../components/MediaGallery'
 
 function Notes() {
   const user = getCurrentUser()
   const [notes, setNotesState] = useState<Note[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [newNote, setNewNote] = useState({
     type: 'love' as Note['type'],
     message: '',
@@ -22,30 +29,76 @@ function Notes() {
     setNotesState(getNotes())
   }, [])
 
-  const handleSendNote = (e: React.FormEvent) => {
+  const handleSendNote = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!user) return
 
+    const noteId = editingNoteId || `note-${Date.now()}`
+    
+    // Upload media files if any
+    let uploadedMedia: any[] = []
+    if (mediaFiles.length > 0) {
+      try {
+        const { uploadMultipleMediaFiles } = await import('../lib/storage')
+        uploadedMedia = await uploadMultipleMediaFiles(
+          mediaFiles.map(f => f.file),
+          user?.id || '',
+          noteId,
+          'note',
+          (progress) => setUploadProgress(progress)
+        )
+      } catch (error) {
+        console.error('Failed to upload media:', error)
+      }
+    }
+
     const note: Note = {
-      id: `note-${Date.now()}`,
+      id: noteId,
       sender_id: user.id,
       receiver_id: user.id === 'ali-user-id' ? 'roma-user-id' : 'ali-user-id',
       type: newNote.type,
       message: newNote.message,
-      read: false,
-      created_at: new Date().toISOString(),
+      read: editingNoteId ? notes.find(n => n.id === editingNoteId)?.read || false : false,
+      created_at: editingNoteId ? notes.find(n => n.id === editingNoteId)?.created_at || new Date().toISOString() : new Date().toISOString(),
+      media: uploadedMedia.length > 0 ? uploadedMedia : editingNoteId ? notes.find(n => n.id === editingNoteId)?.media || [] : []
     }
 
-    const updatedNotes = [note, ...notes]
+    let updatedNotes
+    if (editingNoteId) {
+      updatedNotes = notes.map(n => n.id === editingNoteId ? note : n)
+    } else {
+      updatedNotes = [note, ...notes]
+    }
+    
     setNotes(updatedNotes)
     setNotesState(updatedNotes)
 
+    setIsUploading(false)
     setShowAddForm(false)
+    setEditingNoteId(null)
+    setMediaFiles([])
     setNewNote({
       type: 'love',
       message: '',
     })
+  }
+
+  const handleEditNote = (note: Note) => {
+    setNewNote({
+      type: note.type,
+      message: note.message,
+    })
+    setEditingNoteId(note.id)
+    setShowAddForm(true)
+  }
+
+  const handleDeleteNote = (noteId: string) => {
+    if (confirm('Are you sure you want to delete this note?')) {
+      const updatedNotes = notes.filter(n => n.id !== noteId)
+      setNotes(updatedNotes)
+      setNotesState(updatedNotes)
+    }
   }
 
   const noteTypes = [
@@ -89,12 +142,25 @@ function Notes() {
       />
 
       <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Add Note Form */}
+        {/* Add/Edit Note Form */}
         {showAddForm && (
           <div className="card mb-6 animate-scale-in">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="font-semibold text-gray-800 text-lg">Send a Note</h3>
-              <button onClick={() => setShowAddForm(false)} className="p-2 hover:bg-background-secondary rounded-xl transition-colors">
+              <h3 className="font-semibold text-gray-800 text-lg">
+                {editingNoteId ? 'Edit Note' : 'Send a Note'}
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowAddForm(false)
+                  setEditingNoteId(null)
+                  setNewNote({
+                    type: 'love',
+                    message: '',
+                  })
+                  setMediaFiles([])
+                }} 
+                className="p-2 hover:bg-background-secondary rounded-xl transition-colors"
+              >
                 <X size={24} className="text-gray-500" />
               </button>
             </div>
@@ -129,8 +195,34 @@ function Notes() {
                 placeholder="Write something sweet..."
                 required
               />
-              <button type="submit" className="btn-primary w-full">
-                Send Note
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Photo</label>
+                <MediaUpload 
+                  mediaFiles={mediaFiles}
+                  onMediaChange={setMediaFiles}
+                  maxFiles={1}
+                  accept="image/*"
+                />
+              </div>
+
+              {isUploading && (
+                <div className="p-4 bg-rose-50 rounded-2xl">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-rose-700">Uploading photo...</span>
+                    <span className="text-sm text-rose-600">{Math.round(uploadProgress)}%</span>
+                  </div>
+                  <div className="w-full bg-rose-200 rounded-full h-2">
+                    <div 
+                      className="bg-rose-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <button type="submit" className="btn-primary w-full" disabled={isUploading}>
+                {isUploading ? 'Uploading...' : (editingNoteId ? 'Update Note' : 'Send Note')}
               </button>
             </form>
           </div>
@@ -176,7 +268,7 @@ function Notes() {
                           {getNoteTypeLabel(note.type)}
                         </span>
                         <p className="text-sm text-gray-500 mt-1">
-                          {isMyNote(note) ? 'From you' : 'To you'}
+                          {isMyNote(note) ? 'From you' : 'From your partner'}
                         </p>
                       </div>
                       <span className="text-xs text-gray-400">{formatDate(note.created_at)}</span>
@@ -184,10 +276,35 @@ function Notes() {
 
                     <p className="text-gray-800 leading-relaxed">{note.message}</p>
 
+                    {note.media && note.media.length > 0 && (
+                      <div className="mt-3">
+                        <MediaGallery media={note.media} />
+                      </div>
+                    )}
+
                     {!note.read && !isMyNote(note) && (
                       <div className="mt-3 flex items-center gap-2">
                         <Sparkles size={14} className="text-rose-500" />
                         <span className="text-xs font-medium text-rose-600">New</span>
+                      </div>
+                    )}
+                    
+                    {isMyNote(note) && (
+                      <div className="flex items-center gap-2 mt-3">
+                        <button
+                          onClick={() => handleEditNote(note)}
+                          className="p-2 hover:bg-background-secondary rounded-xl transition-colors"
+                          title="Edit note"
+                        >
+                          <Edit2 size={16} className="text-gray-500" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteNote(note.id)}
+                          className="p-2 hover:bg-red-50 rounded-xl transition-colors"
+                          title="Delete note"
+                        >
+                          <Trash2 size={16} className="text-red-500" />
+                        </button>
                       </div>
                     )}
                   </div>

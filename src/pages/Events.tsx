@@ -68,6 +68,7 @@ function Events() {
       description: newEvent.description || null,
       repeat_yearly: newEvent.repeat_yearly,
       status: newEvent.status,
+      created_by: editingEventId ? events.find(e => e.id === editingEventId)?.created_by || 'user-id' : 'user-id',
       created_at: editingEventId ? events.find(e => e.id === editingEventId)?.created_at || new Date().toISOString() : new Date().toISOString(),
       media: uploadedMedia.length > 0 ? uploadedMedia : events.find(e => e.id === editingEventId)?.media || []
     }
@@ -332,6 +333,9 @@ function Events() {
                             {getEventTypeLabel(event.event_type)}
                           </span>
                           <h3 className="text-lg font-semibold text-gray-800 mt-1">{event.title}</h3>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Created by {event.created_by === 'user-id' ? 'you' : 'your partner'}
+                          </p>
                         </div>
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(event.status)}`}>
                           {event.status}

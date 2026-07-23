@@ -62,7 +62,7 @@ export const uploadMediaFile = async (
   file: File,
   userId: string,
   parentId: string,
-  parentType: 'memory' | 'event'
+  parentType: 'memory' | 'event' | 'note'
 ): Promise<MediaUploadResult> => {
   const validation = validateMediaFile(file)
   if (!validation.valid || !validation.type) {
@@ -114,7 +114,7 @@ export const uploadMultipleMediaFiles = async (
   files: File[],
   userId: string,
   parentId: string,
-  parentType: 'memory' | 'event',
+  parentType: 'memory' | 'event' | 'note',
   onProgress?: (progress: number) => void
 ): Promise<MediaUploadResult[]> => {
   const results: MediaUploadResult[] = []

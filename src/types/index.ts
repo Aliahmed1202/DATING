@@ -49,6 +49,7 @@ export interface Event {
   description: string | null
   repeat_yearly: boolean
   status: 'upcoming' | 'completed' | 'cancelled'
+  created_by: string
   created_at: string
   media?: Media[]
 }
@@ -61,6 +62,7 @@ export interface Note {
   message: string
   read: boolean
   created_at: string
+  media?: Media[]
 }
 
 export interface Notification {

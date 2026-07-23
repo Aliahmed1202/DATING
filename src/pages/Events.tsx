@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getEvents, setEvents, setRelationshipScore, calculateRelationshipScore, calculateUserScore } from '../lib/data'
-import { getCurrentUser } from '../lib/auth'
+import { getEvents, insertEvent, updateEvent, deleteEvent, syncUserScore } from '../lib/data'
 import { formatDate } from '../lib/utils'
 import ResponsiveNav from '../components/ResponsiveNav'
 import PageHeader from '../components/PageHeader'
@@ -10,16 +9,18 @@ import MediaUpload from '../components/MediaUpload'
 import MediaGallery from '../components/MediaGallery'
 import { Plus, X, Calendar as CalendarIcon, MapPin, Gift, Cake, Heart, Plane, Star, Map, Edit2, Trash2 } from 'lucide-react'
 import { Event } from '../types'
-import { MediaFile } from '../lib/storage'
+import { MediaFile, uploadMultipleMediaFiles } from '../lib/storage'
+import { getCurrentUser } from '../lib/auth'
 
 function Events() {
-  const user = getCurrentUser()
-  const [events, setEventsState] = useState<Event[]>([])
+  const [user, setUser] = useState<any>(null)
+  const [events, setEvents] = useState<Event[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingEventId, setEditingEventId] = useState<string | null>(null)
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [error, setError] = useState<string | null>(null)
   const [newEvent, setNewEvent] = useState({
     title: '',
     event_type: 'date' as Event['event_type'],
@@ -32,74 +33,20 @@ function Events() {
   })
 
   useEffect(() => {
-    setEventsState(getEvents())
+    getCurrentUser().then(setUser)
+    loadEvents()
   }, [])
 
-  const handleAddEvent = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    setIsUploading(true)
-    setUploadProgress(0)
-
-    const eventId = editingEventId || `evt-${Date.now()}`
-    
-    // Upload media files if any
-    let uploadedMedia: any[] = []
-    if (mediaFiles.length > 0) {
-      try {
-        const { uploadMultipleMediaFiles } = await import('../lib/storage')
-        uploadedMedia = await uploadMultipleMediaFiles(
-          mediaFiles.map(f => f.file),
-          'user-id', // TODO: Get actual user ID
-          eventId,
-          'event',
-          (progress) => setUploadProgress(progress)
-        )
-      } catch (error) {
-        console.error('Failed to upload media:', error)
-      }
+  async function loadEvents() {
+    try {
+      const data = await getEvents()
+      setEvents(data)
+    } catch (err: any) {
+      setError(err.message)
     }
+  }
 
-    const event: Event = {
-      id: eventId,
-      title: newEvent.title,
-      event_type: newEvent.event_type,
-      date: newEvent.date,
-      time: newEvent.time || null,
-      location: newEvent.location || null,
-      description: newEvent.description || null,
-      repeat_yearly: newEvent.repeat_yearly,
-      status: newEvent.status,
-      created_by: editingEventId ? events.find(e => e.id === editingEventId)?.created_by || 'user-id' : 'user-id',
-      created_at: editingEventId ? events.find(e => e.id === editingEventId)?.created_at || new Date().toISOString() : new Date().toISOString(),
-      media: uploadedMedia.length > 0 ? uploadedMedia : events.find(e => e.id === editingEventId)?.media || []
-    }
-
-    let updatedEvents
-    if (editingEventId) {
-      updatedEvents = events.map(e => e.id === editingEventId ? event : e)
-    } else {
-      updatedEvents = [...events, event]
-    }
-    
-    updatedEvents = updatedEvents.sort((a, b) => 
-      new Date(a.date).getTime() - new Date(b.date).getTime()
-    )
-    
-    setEvents(updatedEvents)
-    setEventsState(updatedEvents)
-    
-    // Update relationship score dynamically
-    const newScore = calculateRelationshipScore()
-    setRelationshipScore(newScore)
-    
-    // Update user score dynamically
-    if (user) {
-      user.score = calculateUserScore(user.id)
-      localStorage.setItem('currentUser', JSON.stringify(user))
-    }
-
-    setIsUploading(false)
+  const resetForm = () => {
     setShowAddForm(false)
     setEditingEventId(null)
     setMediaFiles([])
@@ -113,6 +60,81 @@ function Events() {
       repeat_yearly: false,
       status: 'upcoming',
     })
+  }
+
+  const handleAddEvent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+    setError(null)
+    setIsUploading(true)
+    setUploadProgress(0)
+
+    try {
+      // Determine the event id — for new events we need to insert first to get the DB UUID,
+      // then attach media. For edits we already have the id.
+      if (editingEventId) {
+        // Update existing event
+        await updateEvent(editingEventId, {
+          title: newEvent.title,
+          event_type: newEvent.event_type,
+          date: newEvent.date,
+          time: newEvent.time || null,
+          location: newEvent.location || null,
+          description: newEvent.description || null,
+          repeat_yearly: newEvent.repeat_yearly,
+          status: newEvent.status,
+        })
+
+        // Upload any new media files and attach to existing event
+        if (mediaFiles.length > 0) {
+          await uploadMultipleMediaFiles(
+            mediaFiles.map(f => f.file),
+            user.id,
+            editingEventId,
+            'event',
+            (progress) => setUploadProgress(progress)
+          )
+        }
+
+        // Refresh list
+        await loadEvents()
+      } else {
+        // Insert new event first to get a real UUID
+        const created = await insertEvent({
+          title: newEvent.title,
+          event_type: newEvent.event_type,
+          date: newEvent.date,
+          time: newEvent.time || null,
+          location: newEvent.location || null,
+          description: newEvent.description || null,
+          repeat_yearly: newEvent.repeat_yearly,
+          status: newEvent.status,
+          created_by: user.id,
+        })
+
+        // Upload media using the real event id
+        if (mediaFiles.length > 0) {
+          await uploadMultipleMediaFiles(
+            mediaFiles.map(f => f.file),
+            user.id,
+            created.id,
+            'event',
+            (progress) => setUploadProgress(progress)
+          )
+        }
+
+        // Refresh list so media shows up
+        await loadEvents()
+      }
+
+      // Keep scores in sync
+      await syncUserScore(user.id)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setIsUploading(false)
+      resetForm()
+    }
   }
 
   const handleEditEvent = (event: Event) => {
@@ -130,11 +152,14 @@ function Events() {
     setShowAddForm(true)
   }
 
-  const handleDeleteEvent = (eventId: string) => {
-    if (confirm('Are you sure you want to delete this event?')) {
-      const updatedEvents = events.filter(e => e.id !== eventId)
-      setEvents(updatedEvents)
-      setEventsState(updatedEvents)
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!confirm('Are you sure you want to delete this event?')) return
+    try {
+      await deleteEvent(eventId)
+      setEvents(prev => prev.filter(e => e.id !== eventId))
+      if (user) await syncUserScore(user.id)
+    } catch (err: any) {
+      setError(err.message)
     }
   }
 
@@ -173,9 +198,9 @@ function Events() {
   return (
     <div className="min-h-screen bg-background-primary md:ml-64">
       <ResponsiveNav />
-      
-      <PageHeader 
-        title="Events" 
+
+      <PageHeader
+        title="Events"
         action={
           <button
             onClick={() => setShowAddForm(!showAddForm)}
@@ -188,29 +213,19 @@ function Events() {
       />
 
       <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Add/Edit Event Form */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-2xl text-sm">{error}</div>
+        )}
+
+        {/* Add / Edit Form */}
         {showAddForm && (
           <div className="card mb-6 animate-scale-in">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-semibold text-gray-800 text-lg">
                 {editingEventId ? 'Edit Event' : 'Add New Event'}
               </h3>
-              <button 
-                onClick={() => {
-                  setShowAddForm(false)
-                  setEditingEventId(null)
-                  setNewEvent({
-                    title: '',
-                    event_type: 'date',
-                    date: '',
-                    time: '',
-                    location: '',
-                    description: '',
-                    repeat_yearly: false,
-                    status: 'upcoming',
-                  })
-                  setMediaFiles([])
-                }} 
+              <button
+                onClick={resetForm}
                 className="p-2 hover:bg-background-secondary rounded-xl transition-colors"
               >
                 <X size={24} className="text-gray-500" />
@@ -275,10 +290,10 @@ function Events() {
                 />
                 <label htmlFor="repeat" className="text-sm font-medium text-gray-700">Repeat yearly</label>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">Photos & Videos</label>
-                <MediaUpload 
+                <MediaUpload
                   mediaFiles={mediaFiles}
                   onMediaChange={setMediaFiles}
                   maxFiles={10}
@@ -292,7 +307,7 @@ function Events() {
                     <span className="text-sm text-rose-600">{Math.round(uploadProgress)}%</span>
                   </div>
                   <div className="w-full bg-rose-200 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-rose-500 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${uploadProgress}%` }}
                     />
@@ -301,7 +316,7 @@ function Events() {
               )}
 
               <button type="submit" className="btn-primary w-full" disabled={isUploading}>
-                {isUploading ? 'Uploading...' : (editingEventId ? 'Update Event' : 'Save Event')}
+                {isUploading ? 'Saving...' : (editingEventId ? 'Update Event' : 'Save Event')}
               </button>
             </form>
           </div>
@@ -313,99 +328,91 @@ function Events() {
             icon={CalendarIcon}
             title="No events yet"
             description="Plan your special moments together"
-            action={{
-              label: 'Add First Event',
-              onClick: () => setShowAddForm(true)
-            }}
+            action={{ label: 'Add First Event', onClick: () => setShowAddForm(true) }}
           />
         ) : (
           <div className="space-y-4">
-            {events.map((event, index) => {
-              const eventTypeIcon = getEventTypeIcon(event.event_type)
-              return (
-                <div 
-                  key={event.id} 
-                  className={`card animate-slide-up ${
-                    event.status === 'completed' ? 'opacity-60' : ''
-                  }`}
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
-                      event.event_type === 'birthday' ? 'bg-gradient-to-br from-peach-200 to-coral-200' :
-                      event.event_type === 'anniversary' ? 'bg-gradient-to-br from-rose-200 to-purple-200' :
-                      'bg-gradient-to-br from-peach-100 to-rose-100'
-                    }`}>
-                      {eventTypeIcon}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <span className="text-xs font-semibold uppercase tracking-wide text-rose-600">
-                            {getEventTypeLabel(event.event_type)}
-                          </span>
-                          <h3 className="text-lg font-semibold text-gray-800 mt-1">{event.title}</h3>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Created by {event.created_by === 'user-id' ? 'you' : 'your partner'}
-                          </p>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(event.status)}`}>
-                          {event.status}
+            {events.map((event, index) => (
+              <div
+                key={event.id}
+                className={`card animate-slide-up ${event.status === 'completed' ? 'opacity-60' : ''}`}
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
+                    event.event_type === 'birthday' ? 'bg-gradient-to-br from-peach-200 to-coral-200' :
+                    event.event_type === 'anniversary' ? 'bg-gradient-to-br from-rose-200 to-purple-200' :
+                    'bg-gradient-to-br from-peach-100 to-rose-100'
+                  }`}>
+                    {getEventTypeIcon(event.event_type)}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <span className="text-xs font-semibold uppercase tracking-wide text-rose-600">
+                          {getEventTypeLabel(event.event_type)}
                         </span>
+                        <h3 className="text-lg font-semibold text-gray-800 mt-1">{event.title}</h3>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Created by {event.created_by === user?.id ? 'you' : 'your partner'}
+                        </p>
                       </div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(event.status)}`}>
+                        {event.status}
+                      </span>
+                    </div>
 
-                      <div className="space-y-2 mb-3">
+                    <div className="space-y-2 mb-3">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CalendarIcon size={16} className="text-rose-500" />
+                        <span className="font-medium">{formatDate(event.date)}</span>
+                        {event.time && <span className="text-gray-400">at {event.time}</span>}
+                      </div>
+                      {event.location && (
                         <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <CalendarIcon size={16} className="text-rose-500" />
-                          <span className="font-medium">{formatDate(event.date)}</span>
-                          {event.time && <span className="text-gray-400">at {event.time}</span>}
+                          <MapPin size={16} className="text-rose-500" />
+                          <span>{event.location}</span>
                         </div>
-                        {event.location && (
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <MapPin size={16} className="text-rose-500" />
-                            <span>{event.location}</span>
-                          </div>
-                        )}
+                      )}
+                    </div>
+
+                    {event.description && (
+                      <p className="text-gray-600 text-sm mb-3">{event.description}</p>
+                    )}
+
+                    {event.media && event.media.length > 0 && (
+                      <div className="mb-3">
+                        <MediaGallery media={event.media} />
                       </div>
+                    )}
 
-                      {event.description && (
-                        <p className="text-gray-600 text-sm mb-3">{event.description}</p>
-                      )}
-
-                      {event.media && event.media.length > 0 && (
-                        <div className="mb-3">
-                          <MediaGallery media={event.media} />
-                        </div>
-                      )}
-
-                      {event.repeat_yearly && (
-                        <div className="flex items-center gap-2 text-xs text-purple-600 bg-purple-50 px-3 py-1 rounded-full w-fit">
-                          <Gift size={14} />
-                          <span>Repeats yearly</span>
-                        </div>
-                      )}
-                      
-                      <div className="flex items-center gap-2 mt-3">
-                        <button
-                          onClick={() => handleEditEvent(event)}
-                          className="p-2 hover:bg-background-secondary rounded-xl transition-colors"
-                          title="Edit event"
-                        >
-                          <Edit2 size={16} className="text-gray-500" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteEvent(event.id)}
-                          className="p-2 hover:bg-red-50 rounded-xl transition-colors"
-                          title="Delete event"
-                        >
-                          <Trash2 size={16} className="text-red-500" />
-                        </button>
+                    {event.repeat_yearly && (
+                      <div className="flex items-center gap-2 text-xs text-purple-600 bg-purple-50 px-3 py-1 rounded-full w-fit">
+                        <Gift size={14} />
+                        <span>Repeats yearly</span>
                       </div>
+                    )}
+
+                    <div className="flex items-center gap-2 mt-3">
+                      <button
+                        onClick={() => handleEditEvent(event)}
+                        className="p-2 hover:bg-background-secondary rounded-xl transition-colors"
+                        title="Edit event"
+                      >
+                        <Edit2 size={16} className="text-gray-500" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteEvent(event.id)}
+                        className="p-2 hover:bg-red-50 rounded-xl transition-colors"
+                        title="Delete event"
+                      >
+                        <Trash2 size={16} className="text-red-500" />
+                      </button>
                     </div>
                   </div>
                 </div>
-              )
-            })}
+              </div>
+            ))}
           </div>
         )}
       </div>

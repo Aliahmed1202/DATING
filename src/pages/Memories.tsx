@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getMemories, setMemories, setRelationshipScore, calculateRelationshipScore, calculateUserScore } from '../lib/data'
+import { getMemories, insertMemory, updateMemory, deleteMemory, syncUserScore } from '../lib/data'
 import { getCurrentUser } from '../lib/auth'
 import { formatDate } from '../lib/utils'
 import ResponsiveNav from '../components/ResponsiveNav'
@@ -10,16 +10,17 @@ import MediaUpload from '../components/MediaUpload'
 import MediaGallery from '../components/MediaGallery'
 import { Heart, Plus, X, Star, Edit2, Trash2 } from 'lucide-react'
 import { Memory } from '../types'
-import { MediaFile } from '../lib/storage'
+import { MediaFile, uploadMultipleMediaFiles } from '../lib/storage'
 
 function Memories() {
-  const user = getCurrentUser()
+  const [user, setUser] = useState<any>(null)
   const [memories, setMemoriesState] = useState<Memory[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingMemoryId, setEditingMemoryId] = useState<string | null>(null)
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [error, setError] = useState<string | null>(null)
   const [newMemory, setNewMemory] = useState({
     title: '',
     description: '',
@@ -29,88 +30,85 @@ function Memories() {
   })
 
   useEffect(() => {
-    setMemoriesState(getMemories())
+    getCurrentUser().then(setUser)
+    loadMemories()
   }, [])
 
-  const handleAddMemory = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    setIsUploading(true)
-    setUploadProgress(0)
-
-    const memoryId = editingMemoryId || `mem-${Date.now()}`
-    
-    // Upload media files if any
-    let uploadedMedia: any[] = []
-    if (mediaFiles.length > 0) {
-      try {
-        const { uploadMultipleMediaFiles } = await import('../lib/storage')
-        uploadedMedia = await uploadMultipleMediaFiles(
-          mediaFiles.map(f => f.file),
-          user?.id || '',
-          memoryId,
-          'memory',
-          (progress) => setUploadProgress(progress)
-        )
-      } catch (error) {
-        console.error('Failed to upload media:', error)
-      }
+  async function loadMemories() {
+    try {
+      const data = await getMemories()
+      setMemoriesState(data)
+    } catch (err: any) {
+      setError(err.message)
     }
+  }
 
-    const memory: Memory = {
-      id: memoryId,
-      title: newMemory.title,
-      description: newMemory.description,
-      memory_type: newMemory.memory_type,
-      memory_date: newMemory.memory_date,
-      mood: newMemory.mood,
-      photo_url: null,
-      created_by: user?.id || '',
-      created_at: editingMemoryId ? memories.find(m => m.id === editingMemoryId)?.created_at || new Date().toISOString() : new Date().toISOString(),
-      points: editingMemoryId ? memories.find(m => m.id === editingMemoryId)?.points || 10 : 10,
-      media: uploadedMedia.length > 0 ? uploadedMedia : memories.find(m => m.id === editingMemoryId)?.media || []
-    }
-
-    let updatedMemories
-    if (editingMemoryId) {
-      updatedMemories = memories.map(m => m.id === editingMemoryId ? memory : m)
-    } else {
-      updatedMemories = [memory, ...memories]
-    }
-    
-    setMemories(updatedMemories)
-    setMemoriesState(updatedMemories)
-    
-    // Update relationship score dynamically
-    const newScore = calculateRelationshipScore()
-    setRelationshipScore(newScore)
-    
-    // Update user score dynamically
-    if (user) {
-      user.score = calculateUserScore(user.id)
-      localStorage.setItem('currentUser', JSON.stringify(user))
-    }
-
-    setIsUploading(false)
+  const resetForm = () => {
     setShowAddForm(false)
     setEditingMemoryId(null)
     setMediaFiles([])
-    setNewMemory({
-      title: '',
-      description: '',
-      memory_type: 'good',
-      memory_date: '',
-      mood: 'happy',
-    })
+    setNewMemory({ title: '', description: '', memory_type: 'good', memory_date: '', mood: 'happy' })
   }
 
-  const reactions = [
-    { type: 'love', emoji: '❤️' },
-    { type: 'emotional', emoji: '🥹' },
-    { type: 'funny', emoji: '😂' },
-    { type: 'together', emoji: '🫂' },
-    { type: 'special', emoji: '⭐' },
-  ]
+  const handleAddMemory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+    setError(null)
+    setIsUploading(true)
+    setUploadProgress(0)
+
+    try {
+      if (editingMemoryId) {
+        await updateMemory(editingMemoryId, {
+          title: newMemory.title,
+          description: newMemory.description,
+          memory_type: newMemory.memory_type,
+          memory_date: newMemory.memory_date,
+          mood: newMemory.mood,
+        })
+
+        if (mediaFiles.length > 0) {
+          await uploadMultipleMediaFiles(
+            mediaFiles.map(f => f.file),
+            user.id,
+            editingMemoryId,
+            'memory',
+            (progress) => setUploadProgress(progress)
+          )
+        }
+      } else {
+        // Insert first to get the real UUID, then upload media using that id
+        const created = await insertMemory({
+          title: newMemory.title,
+          description: newMemory.description,
+          memory_type: newMemory.memory_type,
+          memory_date: newMemory.memory_date,
+          mood: newMemory.mood,
+          photo_url: null,
+          created_by: user.id,
+          points: 10,
+        })
+
+        if (mediaFiles.length > 0) {
+          await uploadMultipleMediaFiles(
+            mediaFiles.map(f => f.file),
+            user.id,
+            created.id,
+            'memory',
+            (progress) => setUploadProgress(progress)
+          )
+        }
+      }
+
+      await loadMemories()
+      await syncUserScore(user.id)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setIsUploading(false)
+      resetForm()
+    }
+  }
 
   const handleEditMemory = (memory: Memory) => {
     setNewMemory({
@@ -124,24 +122,34 @@ function Memories() {
     setShowAddForm(true)
   }
 
-  const handleDeleteMemory = (memoryId: string) => {
-    if (confirm('Are you sure you want to delete this memory?')) {
-      const updatedMemories = memories.filter(m => m.id !== memoryId)
-      setMemories(updatedMemories)
-      setMemoriesState(updatedMemories)
+  const handleDeleteMemory = async (memoryId: string) => {
+    if (!confirm('Are you sure you want to delete this memory?')) return
+    try {
+      await deleteMemory(memoryId)
+      setMemoriesState(prev => prev.filter(m => m.id !== memoryId))
+      if (user) await syncUserScore(user.id)
+    } catch (err: any) {
+      setError(err.message)
     }
   }
 
-  const getMemoryTypeLabel = (type: string) => {
-    return type === 'good' ? 'Good Memory' : 'Moment We Overcame'
-  }
+  const reactions = [
+    { type: 'love', emoji: '❤️' },
+    { type: 'emotional', emoji: '🥹' },
+    { type: 'funny', emoji: '😂' },
+    { type: 'together', emoji: '🫂' },
+    { type: 'special', emoji: '⭐' },
+  ]
+
+  const getMemoryTypeLabel = (type: string) =>
+    type === 'good' ? 'Good Memory' : 'Moment We Overcame'
 
   return (
     <div className="min-h-screen bg-background-primary md:ml-64">
       <ResponsiveNav />
-      
-      <PageHeader 
-        title="Memories" 
+
+      <PageHeader
+        title="Memories"
         action={
           <button
             onClick={() => setShowAddForm(!showAddForm)}
@@ -154,26 +162,19 @@ function Memories() {
       />
 
       <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Add/Edit Memory Form */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-2xl text-sm">{error}</div>
+        )}
+
+        {/* Add / Edit Form */}
         {showAddForm && (
           <div className="card mb-6 animate-scale-in">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-semibold text-gray-800 text-lg">
                 {editingMemoryId ? 'Edit Memory' : 'Add New Memory'}
               </h3>
-              <button 
-                onClick={() => {
-                  setShowAddForm(false)
-                  setEditingMemoryId(null)
-                  setNewMemory({
-                    title: '',
-                    description: '',
-                    memory_type: 'good',
-                    memory_date: '',
-                    mood: 'happy',
-                  })
-                  setMediaFiles([])
-                }} 
+              <button
+                onClick={resetForm}
                 className="p-2 hover:bg-background-secondary rounded-xl transition-colors"
               >
                 <X size={24} className="text-gray-500" />
@@ -244,10 +245,10 @@ function Memories() {
                   <option value="grateful">Grateful</option>
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">Photos & Videos</label>
-                <MediaUpload 
+                <MediaUpload
                   mediaFiles={mediaFiles}
                   onMediaChange={setMediaFiles}
                   maxFiles={10}
@@ -261,7 +262,7 @@ function Memories() {
                     <span className="text-sm text-rose-600">{Math.round(uploadProgress)}%</span>
                   </div>
                   <div className="w-full bg-rose-200 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-rose-500 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${uploadProgress}%` }}
                     />
@@ -270,7 +271,7 @@ function Memories() {
               )}
 
               <button type="submit" className="btn-primary w-full" disabled={isUploading}>
-                {isUploading ? 'Uploading...' : (editingMemoryId ? 'Update Memory' : 'Save Memory')}
+                {isUploading ? 'Saving...' : (editingMemoryId ? 'Update Memory' : 'Save Memory')}
               </button>
             </form>
           </div>
@@ -282,19 +283,16 @@ function Memories() {
             icon={Heart}
             title="No memories yet"
             description="Start creating beautiful memories together"
-            action={{
-              label: 'Add First Memory',
-              onClick: () => setShowAddForm(true)
-            }}
+            action={{ label: 'Add First Memory', onClick: () => setShowAddForm(true) }}
           />
         ) : (
           <div className="space-y-4">
             {memories.map((memory, index) => (
-              <div 
-                key={memory.id} 
+              <div
+                key={memory.id}
                 className={`card animate-slide-up ${
-                  memory.memory_type === 'hard_moment' 
-                    ? 'border-l-4 border-l-purple-400' 
+                  memory.memory_type === 'hard_moment'
+                    ? 'border-l-4 border-l-purple-400'
                     : 'border-l-4 border-l-rose-400'
                 }`}
                 style={{ animationDelay: `${index * 0.05}s` }}
@@ -315,7 +313,7 @@ function Memories() {
                     {formatDate(memory.memory_date)}
                   </span>
                 </div>
-                
+
                 {memory.description && (
                   <p className="text-gray-600 text-sm mb-4 leading-relaxed">{memory.description}</p>
                 )}

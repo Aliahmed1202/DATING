@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { insertMediaRecord } from './data'
 
 const BUCKET_NAME = 'loll'
 
@@ -15,15 +16,18 @@ export interface MediaUploadResult {
   type: 'image' | 'video'
   name: string
   size: number
+  file_path: string
 }
 
 // Validate file type and size
-export const validateMediaFile = (file: File): { valid: boolean; type: 'image' | 'video' | null; error?: string } => {
+export const validateMediaFile = (
+  file: File
+): { valid: boolean; type: 'image' | 'video' | null; error?: string } => {
   const imageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg']
   const videoTypes = ['video/mp4', 'video/quicktime', 'video/webm']
-  
-  const maxSizeImage = 5 * 1024 * 1024 // 5MB
-  const maxSizeVideo = 50 * 1024 * 1024 // 50MB
+
+  const maxSizeImage = 5 * 1024 * 1024  // 5 MB
+  const maxSizeVideo = 50 * 1024 * 1024 // 50 MB
 
   if (imageTypes.includes(file.type)) {
     if (file.size > maxSizeImage) {
@@ -39,17 +43,20 @@ export const validateMediaFile = (file: File): { valid: boolean; type: 'image' |
     return { valid: true, type: 'video' }
   }
 
-  return { valid: false, type: null, error: 'Invalid file type. Only JPG, PNG, WebP, MP4, MOV, and WebM are allowed.' }
+  return {
+    valid: false,
+    type: null,
+    error: 'Invalid file type. Only JPG, PNG, WebP, MP4, MOV, and WebM are allowed.',
+  }
 }
 
-// Generate preview for images
+// Generate preview URL for images
 export const createPreview = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith('image/')) {
       resolve('')
       return
     }
-
     const reader = new FileReader()
     reader.onload = (e) => resolve(e.target?.result as string)
     reader.onerror = reject
@@ -57,7 +64,9 @@ export const createPreview = (file: File): Promise<string> => {
   })
 }
 
-// Upload file to Supabase Storage
+/**
+ * Upload a single file to Supabase Storage and save a record to the media table.
+ */
 export const uploadMediaFile = async (
   file: File,
   userId: string,
@@ -77,39 +86,58 @@ export const uploadMediaFile = async (
     .from(BUCKET_NAME)
     .upload(filePath, file, {
       cacheControl: '3600',
-      upsert: false
+      upsert: false,
     })
 
-  if (error) {
-    throw new Error(`Upload failed: ${error.message}`)
-  }
+  if (error) throw new Error(`Upload failed: ${error.message}`)
 
-  // Get public URL
-  const { data: { publicUrl } } = supabase.storage
-    .from(BUCKET_NAME)
-    .getPublicUrl(filePath)
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath)
 
-  return {
-    id: data.id,
+  const result: MediaUploadResult = {
+    id: data.id ?? crypto.randomUUID(),
     url: publicUrl,
     type: validation.type,
     name: file.name,
-    size: file.size
+    size: file.size,
+    file_path: filePath,
   }
+
+  // Persist a record in the media table for non-avatar uploads
+  if (parentType !== 'avatar') {
+    try {
+      const saved = await insertMediaRecord({
+        parent_id: parentId,
+        parent_type: parentType as 'memory' | 'event' | 'note',
+        type: validation.type,
+        url: publicUrl,
+        file_path: filePath,
+        name: file.name,
+        size: file.size,
+        uploaded_by: userId,
+      })
+      // Use the DB-generated UUID so the caller has the real id
+      result.id = saved.id
+    } catch (dbErr) {
+      console.error('Media DB record save failed (file is still in bucket):', dbErr)
+    }
+  }
+
+  return result
 }
 
-// Delete file from Supabase Storage
+/**
+ * Delete a file from Supabase Storage.
+ */
 export const deleteMediaFile = async (filePath: string): Promise<void> => {
-  const { error } = await supabase.storage
-    .from(BUCKET_NAME)
-    .remove([filePath])
-
-  if (error) {
-    throw new Error(`Delete failed: ${error.message}`)
-  }
+  const { error } = await supabase.storage.from(BUCKET_NAME).remove([filePath])
+  if (error) throw new Error(`Delete failed: ${error.message}`)
 }
 
-// Upload multiple files
+/**
+ * Upload multiple files sequentially, reporting progress.
+ */
 export const uploadMultipleMediaFiles = async (
   files: File[],
   userId: string,
@@ -118,7 +146,7 @@ export const uploadMultipleMediaFiles = async (
   onProgress?: (progress: number) => void
 ): Promise<MediaUploadResult[]> => {
   const results: MediaUploadResult[] = []
-  
+
   for (let i = 0; i < files.length; i++) {
     try {
       const result = await uploadMediaFile(files[i], userId, parentId, parentType)
@@ -134,15 +162,17 @@ export const uploadMultipleMediaFiles = async (
   return results
 }
 
-// Get signed URL for private files (if needed)
-export const getSignedUrl = async (filePath: string, expiresIn: number = 3600): Promise<string> => {
+/**
+ * Get a signed URL for a private file (if bucket is not public).
+ */
+export const getSignedUrl = async (
+  filePath: string,
+  expiresIn = 3600
+): Promise<string> => {
   const { data, error } = await supabase.storage
     .from(BUCKET_NAME)
     .createSignedUrl(filePath, expiresIn)
 
-  if (error) {
-    throw new Error(`Failed to get signed URL: ${error.message}`)
-  }
-
+  if (error) throw new Error(`Failed to get signed URL: ${error.message}`)
   return data.signedUrl
 }

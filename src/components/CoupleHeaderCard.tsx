@@ -1,10 +1,23 @@
+import { useState, useEffect } from 'react'
 import { Heart } from 'lucide-react'
 import { formatDate } from '../lib/utils'
 import { getRelationship, calculateDaysTogether } from '../lib/data'
+import type { Relationship } from '../types'
 
 function CoupleHeaderCard() {
-  const relationship = getRelationship()
-  const daysTogether = calculateDaysTogether()
+  const [relationship, setRelationship] = useState<Relationship | null>(null)
+  const [daysTogether, setDaysTogether] = useState(0)
+
+  useEffect(() => {
+    getRelationship().then(setRelationship)
+    calculateDaysTogether().then(setDaysTogether)
+  }, [])
+
+  if (!relationship) {
+    return (
+      <div className="bg-gradient-to-br from-peach-400 via-coral-400 to-rose-400 rounded-3xl p-6 md:p-8 animate-pulse h-44" />
+    )
+  }
 
   return (
     <div className="bg-gradient-to-br from-peach-400 via-coral-400 to-rose-400 rounded-3xl p-6 md:p-8 text-white shadow-soft-lg animate-fade-in">

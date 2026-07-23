@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getRelationshipScore, getMemories, calculateUserScore } from '../lib/data'
+import { getMemories, calculateRelationshipScore, calculateUserScore } from '../lib/data'
+import { supabase } from '../lib/supabase'
 import { formatDate } from '../lib/utils'
 import ResponsiveNav from '../components/ResponsiveNav'
 import CoupleHeaderCard from '../components/CoupleHeaderCard'
 import ScoreCard from '../components/ScoreCard'
 import { Heart, Calendar, MessageSquare } from 'lucide-react'
+
+// Known user IDs — same as hardcoded in auth.ts NAME_MAP via profile creation
+const ALI_EMAIL = 'aliahmesbiso@gmail.com'
+const ROMA_EMAIL = 'romysaa.samir@icloud.com'
 
 function Dashboard() {
   const navigate = useNavigate()
@@ -13,12 +18,40 @@ function Dashboard() {
   const [memories, setMemories] = useState<any[]>([])
   const [aliScore, setAliScore] = useState(0)
   const [romaScore, setRomaScore] = useState(0)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setScore(getRelationshipScore())
-    setMemories(getMemories())
-    setAliScore(calculateUserScore('ali-user-id'))
-    setRomaScore(calculateUserScore('roma-user-id'))
+    async function load() {
+      try {
+        const [mems, relScore] = await Promise.all([
+          getMemories(),
+          calculateRelationshipScore(),
+        ])
+        setMemories(mems)
+        setScore(relScore)
+
+        // Fetch both profiles to get their IDs for individual scores
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, email')
+
+        if (profiles) {
+          const ali = profiles.find((p: any) => p.email === ALI_EMAIL)
+          const roma = profiles.find((p: any) => p.email === ROMA_EMAIL)
+          const [aScore, rScore] = await Promise.all([
+            ali ? calculateUserScore(ali.id) : Promise.resolve(0),
+            roma ? calculateUserScore(roma.id) : Promise.resolve(0),
+          ])
+          setAliScore(aScore)
+          setRomaScore(rScore)
+        }
+      } catch (err) {
+        console.error('Dashboard load error:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
   }, [])
 
   const quickActions = [
@@ -30,7 +63,7 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-background-primary md:ml-64">
       <ResponsiveNav />
-      
+
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Main Couple Card */}
         <CoupleHeaderCard />
@@ -64,26 +97,45 @@ function Dashboard() {
         <div className="card animate-slide-up" style={{ animationDelay: '0.2s' }}>
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-semibold text-gray-800 text-lg">Latest Memories</h3>
-            <button onClick={() => navigate('/memories')} className="text-rose-600 text-sm font-medium hover:text-rose-700">
+            <button
+              onClick={() => navigate('/memories')}
+              className="text-rose-600 text-sm font-medium hover:text-rose-700"
+            >
               View All
             </button>
           </div>
-          <div className="space-y-3">
-            {memories.slice(0, 3).map((memory) => (
-              <div key={memory.id} className="flex items-center gap-4 p-4 bg-background-secondary rounded-2xl hover:bg-rose-50 transition-all duration-200 cursor-pointer">
-                <div className="w-12 h-12 bg-gradient-to-br from-peach-200 to-coral-200 rounded-xl flex items-center justify-center">
-                  <Heart size={20} className="text-rose-600" />
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-16 bg-background-secondary rounded-2xl animate-pulse" />
+              ))}
+            </div>
+          ) : memories.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-6">No memories yet. Add your first one!</p>
+          ) : (
+            <div className="space-y-3">
+              {memories.slice(0, 3).map((memory) => (
+                <div
+                  key={memory.id}
+                  className="flex items-center gap-4 p-4 bg-background-secondary rounded-2xl hover:bg-rose-50 transition-all duration-200 cursor-pointer"
+                  onClick={() => navigate('/memories')}
+                >
+                  <div className="w-12 h-12 bg-gradient-to-br from-peach-200 to-coral-200 rounded-xl flex items-center justify-center">
+                    <Heart size={20} className="text-rose-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-800">{memory.title}</p>
+                    <p className="text-sm text-gray-500">{formatDate(memory.memory_date)}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-medium text-rose-600 bg-rose-50 px-2 py-1 rounded-full">
+                      +{memory.points}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium text-gray-800">{memory.title}</p>
-                  <p className="text-sm text-gray-500">{formatDate(memory.memory_date)}</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs font-medium text-rose-600 bg-rose-50 px-2 py-1 rounded-full">+{memory.points}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

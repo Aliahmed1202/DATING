@@ -83,11 +83,12 @@ export interface Level {
 export interface Media {
   id: string
   parent_id: string
-  parent_type: 'memory' | 'event'
+  parent_type: 'memory' | 'event' | 'note'
   type: 'image' | 'video'
   url: string
   file_path: string
   name: string
   size: number
+  uploaded_by?: string
   created_at: string
 }

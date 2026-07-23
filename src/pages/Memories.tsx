@@ -34,12 +34,8 @@ function Memories() {
     const u = getCurrentUser()
     setUser(u)
     if (u) {
-      const partner = u.id === 'ali-user-id'
-        ? { name: 'Roma' }
-        : { name: 'Ali' }
-      setPartnerName(partner.name)
-    }
-    loadMemories()
+      setPartnerName(u.email === 'aliahmesbiso@gmail.com' ? 'Roma' : 'Ali')
+    }    loadMemories()
   }, [])
 
   async function loadMemories() {

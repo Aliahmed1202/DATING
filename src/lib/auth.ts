@@ -95,6 +95,12 @@ async function upsertAndReturn(
     user.nickname = profile.nickname ?? account.nickname
   }
 
+  // Clear any stale localStorage data that has old non-UUID ids
+  localStorage.removeItem('currentUser')
+  localStorage.removeItem('memories')
+  localStorage.removeItem('events')
+  localStorage.removeItem('notes')
+
   // Store in localStorage for synchronous getCurrentUser()
   localStorage.setItem('currentUser', JSON.stringify(user))
   return user

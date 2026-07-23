@@ -37,7 +37,7 @@ function Events() {
     const u = getCurrentUser()
     setUser(u)
     if (u) {
-      setPartnerName(u.id === 'ali-user-id' ? 'Roma' : 'Ali')
+      setPartnerName(u.email === 'aliahmesbiso@gmail.com' ? 'Roma' : 'Ali')
     }
     loadEvents()
   }, [])

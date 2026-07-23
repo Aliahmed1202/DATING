@@ -57,8 +57,8 @@ function Profile() {
         }
       }
 
-      // Save changes to localStorage
-      const updated = updateProfile(user.id, {
+      // Save changes to Supabase profiles table
+      const updated = await updateProfile(user.id, {
         nickname: editedUser.nickname,
         birth_date: editedUser.birth_date || null,
         avatar: avatarUrl,

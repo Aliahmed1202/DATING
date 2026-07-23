@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 
-const BUCKET_NAME = 'ourspace-media'
+const BUCKET_NAME = 'loll'
 
 export interface MediaFile {
   id: string

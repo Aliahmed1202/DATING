@@ -8,7 +8,7 @@ import EmptyState from '../components/EmptyState'
 import { FormInput, FormTextarea } from '../components/FormInput'
 import MediaUpload from '../components/MediaUpload'
 import MediaGallery from '../components/MediaGallery'
-import { Heart, Plus, X, Star } from 'lucide-react'
+import { Heart, Plus, X, Star, Edit2, Trash2 } from 'lucide-react'
 import { Memory } from '../types'
 import { MediaFile } from '../lib/storage'
 
@@ -16,6 +16,7 @@ function Memories() {
   const user = getCurrentUser()
   const [memories, setMemoriesState] = useState<Memory[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
+  const [editingMemoryId, setEditingMemoryId] = useState<string | null>(null)
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -37,7 +38,7 @@ function Memories() {
     setIsUploading(true)
     setUploadProgress(0)
 
-    const memoryId = `mem-${Date.now()}`
+    const memoryId = editingMemoryId || `mem-${Date.now()}`
     
     // Upload media files if any
     let uploadedMedia: any[] = []
@@ -65,27 +66,35 @@ function Memories() {
       mood: newMemory.mood,
       photo_url: null,
       created_by: user?.id || '',
-      created_at: new Date().toISOString(),
-      points: 10,
-      media: uploadedMedia
+      created_at: editingMemoryId ? memories.find(m => m.id === editingMemoryId)?.created_at || new Date().toISOString() : new Date().toISOString(),
+      points: editingMemoryId ? memories.find(m => m.id === editingMemoryId)?.points || 10 : 10,
+      media: uploadedMedia.length > 0 ? uploadedMedia : memories.find(m => m.id === editingMemoryId)?.media || []
     }
 
-    const updatedMemories = [memory, ...memories]
+    let updatedMemories
+    if (editingMemoryId) {
+      updatedMemories = memories.map(m => m.id === editingMemoryId ? memory : m)
+    } else {
+      updatedMemories = [memory, ...memories]
+    }
+    
     setMemories(updatedMemories)
     setMemoriesState(updatedMemories)
     
-    // Update scores
-    const currentScore = getRelationshipScore()
-    setRelationshipScore(currentScore + 5)
-    
-    // Update user score
-    if (user) {
-      user.score += 10
-      localStorage.setItem('currentUser', JSON.stringify(user))
+    // Update scores only for new memories
+    if (!editingMemoryId) {
+      const currentScore = getRelationshipScore()
+      setRelationshipScore(currentScore + 5)
+      
+      if (user) {
+        user.score += 10
+        localStorage.setItem('currentUser', JSON.stringify(user))
+      }
     }
 
     setIsUploading(false)
     setShowAddForm(false)
+    setEditingMemoryId(null)
     setMediaFiles([])
     setNewMemory({
       title: '',
@@ -103,6 +112,26 @@ function Memories() {
     { type: 'together', emoji: '🫂' },
     { type: 'special', emoji: '⭐' },
   ]
+
+  const handleEditMemory = (memory: Memory) => {
+    setNewMemory({
+      title: memory.title,
+      description: memory.description,
+      memory_type: memory.memory_type,
+      memory_date: memory.memory_date,
+      mood: memory.mood,
+    })
+    setEditingMemoryId(memory.id)
+    setShowAddForm(true)
+  }
+
+  const handleDeleteMemory = (memoryId: string) => {
+    if (confirm('Are you sure you want to delete this memory?')) {
+      const updatedMemories = memories.filter(m => m.id !== memoryId)
+      setMemories(updatedMemories)
+      setMemoriesState(updatedMemories)
+    }
+  }
 
   const getMemoryTypeLabel = (type: string) => {
     return type === 'good' ? 'Good Memory' : 'Moment We Overcame'
@@ -126,12 +155,28 @@ function Memories() {
       />
 
       <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Add Memory Form */}
+        {/* Add/Edit Memory Form */}
         {showAddForm && (
           <div className="card mb-6 animate-scale-in">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="font-semibold text-gray-800 text-lg">Add New Memory</h3>
-              <button onClick={() => setShowAddForm(false)} className="p-2 hover:bg-background-secondary rounded-xl transition-colors">
+              <h3 className="font-semibold text-gray-800 text-lg">
+                {editingMemoryId ? 'Edit Memory' : 'Add New Memory'}
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowAddForm(false)
+                  setEditingMemoryId(null)
+                  setNewMemory({
+                    title: '',
+                    description: '',
+                    memory_type: 'good',
+                    memory_date: '',
+                    mood: 'happy',
+                  })
+                  setMediaFiles([])
+                }} 
+                className="p-2 hover:bg-background-secondary rounded-xl transition-colors"
+              >
                 <X size={24} className="text-gray-500" />
               </button>
             </div>
@@ -226,7 +271,7 @@ function Memories() {
               )}
 
               <button type="submit" className="btn-primary w-full" disabled={isUploading}>
-                {isUploading ? 'Uploading...' : 'Save Memory'}
+                {isUploading ? 'Uploading...' : (editingMemoryId ? 'Update Memory' : 'Save Memory')}
               </button>
             </form>
           </div>
@@ -291,9 +336,25 @@ function Memories() {
                       </button>
                     ))}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Heart size={16} className="text-rose-500" />
-                    <span className="text-sm font-medium text-rose-600">+{memory.points} pts</span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleEditMemory(memory)}
+                      className="p-2 hover:bg-background-secondary rounded-xl transition-colors"
+                      title="Edit memory"
+                    >
+                      <Edit2 size={16} className="text-gray-500" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteMemory(memory.id)}
+                      className="p-2 hover:bg-red-50 rounded-xl transition-colors"
+                      title="Delete memory"
+                    >
+                      <Trash2 size={16} className="text-red-500" />
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <Heart size={16} className="text-rose-500" />
+                      <span className="text-sm font-medium text-rose-600">+{memory.points} pts</span>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -7,13 +7,14 @@ import EmptyState from '../components/EmptyState'
 import { FormInput, FormTextarea } from '../components/FormInput'
 import MediaUpload from '../components/MediaUpload'
 import MediaGallery from '../components/MediaGallery'
-import { Plus, X, Calendar as CalendarIcon, MapPin, Gift, Cake, Heart, Plane, Star, Map } from 'lucide-react'
+import { Plus, X, Calendar as CalendarIcon, MapPin, Gift, Cake, Heart, Plane, Star, Map, Edit2, Trash2 } from 'lucide-react'
 import { Event } from '../types'
 import { MediaFile } from '../lib/storage'
 
 function Events() {
   const [events, setEventsState] = useState<Event[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
+  const [editingEventId, setEditingEventId] = useState<string | null>(null)
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -38,7 +39,7 @@ function Events() {
     setIsUploading(true)
     setUploadProgress(0)
 
-    const eventId = `evt-${Date.now()}`
+    const eventId = editingEventId || `evt-${Date.now()}`
     
     // Upload media files if any
     let uploadedMedia: any[] = []
@@ -67,18 +68,27 @@ function Events() {
       description: newEvent.description || null,
       repeat_yearly: newEvent.repeat_yearly,
       status: newEvent.status,
-      created_at: new Date().toISOString(),
-      media: uploadedMedia
+      created_at: editingEventId ? events.find(e => e.id === editingEventId)?.created_at || new Date().toISOString() : new Date().toISOString(),
+      media: uploadedMedia.length > 0 ? uploadedMedia : events.find(e => e.id === editingEventId)?.media || []
     }
 
-    const updatedEvents = [...events, event].sort((a, b) => 
+    let updatedEvents
+    if (editingEventId) {
+      updatedEvents = events.map(e => e.id === editingEventId ? event : e)
+    } else {
+      updatedEvents = [...events, event]
+    }
+    
+    updatedEvents = updatedEvents.sort((a, b) => 
       new Date(a.date).getTime() - new Date(b.date).getTime()
     )
+    
     setEvents(updatedEvents)
     setEventsState(updatedEvents)
 
     setIsUploading(false)
     setShowAddForm(false)
+    setEditingEventId(null)
     setMediaFiles([])
     setNewEvent({
       title: '',
@@ -90,6 +100,29 @@ function Events() {
       repeat_yearly: false,
       status: 'upcoming',
     })
+  }
+
+  const handleEditEvent = (event: Event) => {
+    setNewEvent({
+      title: event.title,
+      event_type: event.event_type,
+      date: event.date,
+      time: event.time || '',
+      location: event.location || '',
+      description: event.description || '',
+      repeat_yearly: event.repeat_yearly,
+      status: event.status,
+    })
+    setEditingEventId(event.id)
+    setShowAddForm(true)
+  }
+
+  const handleDeleteEvent = (eventId: string) => {
+    if (confirm('Are you sure you want to delete this event?')) {
+      const updatedEvents = events.filter(e => e.id !== eventId)
+      setEvents(updatedEvents)
+      setEventsState(updatedEvents)
+    }
   }
 
   const getEventTypeLabel = (type: string) => {
@@ -142,12 +175,31 @@ function Events() {
       />
 
       <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Add Event Form */}
+        {/* Add/Edit Event Form */}
         {showAddForm && (
           <div className="card mb-6 animate-scale-in">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="font-semibold text-gray-800 text-lg">Add New Event</h3>
-              <button onClick={() => setShowAddForm(false)} className="p-2 hover:bg-background-secondary rounded-xl transition-colors">
+              <h3 className="font-semibold text-gray-800 text-lg">
+                {editingEventId ? 'Edit Event' : 'Add New Event'}
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowAddForm(false)
+                  setEditingEventId(null)
+                  setNewEvent({
+                    title: '',
+                    event_type: 'date',
+                    date: '',
+                    time: '',
+                    location: '',
+                    description: '',
+                    repeat_yearly: false,
+                    status: 'upcoming',
+                  })
+                  setMediaFiles([])
+                }} 
+                className="p-2 hover:bg-background-secondary rounded-xl transition-colors"
+              >
                 <X size={24} className="text-gray-500" />
               </button>
             </div>
@@ -236,7 +288,7 @@ function Events() {
               )}
 
               <button type="submit" className="btn-primary w-full" disabled={isUploading}>
-                {isUploading ? 'Uploading...' : 'Save Event'}
+                {isUploading ? 'Uploading...' : (editingEventId ? 'Update Event' : 'Save Event')}
               </button>
             </form>
           </div>
@@ -316,6 +368,23 @@ function Events() {
                           <span>Repeats yearly</span>
                         </div>
                       )}
+                      
+                      <div className="flex items-center gap-2 mt-3">
+                        <button
+                          onClick={() => handleEditEvent(event)}
+                          className="p-2 hover:bg-background-secondary rounded-xl transition-colors"
+                          title="Edit event"
+                        >
+                          <Edit2 size={16} className="text-gray-500" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEvent(event.id)}
+                          className="p-2 hover:bg-red-50 rounded-xl transition-colors"
+                          title="Delete event"
+                        >
+                          <Trash2 size={16} className="text-red-500" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

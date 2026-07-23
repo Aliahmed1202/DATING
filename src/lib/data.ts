@@ -59,7 +59,6 @@ export async function calculateRelationshipScore(): Promise<number> {
     supabase.from('events').select('*', { count: 'exact', head: true }),
     supabase.from('notes').select('*', { count: 'exact', head: true }),
   ])
-
   return ((memCount ?? 0) * 10) + ((evtCount ?? 0) * 5) + ((noteCount ?? 0) * 3)
 }
 
@@ -69,15 +68,30 @@ export async function calculateUserScore(userId: string): Promise<number> {
     supabase.from('events').select('*', { count: 'exact', head: true }).eq('created_by', userId),
     supabase.from('notes').select('*', { count: 'exact', head: true }).eq('sender_id', userId),
   ])
-
   return ((memCount ?? 0) * 10) + ((evtCount ?? 0) * 5) + ((noteCount ?? 0) * 3)
 }
 
-/** Persist the calculated score back to the profile row */
 export async function syncUserScore(userId: string): Promise<number> {
   const score = await calculateUserScore(userId)
   await supabase.from('profiles').update({ score }).eq('id', userId)
   return score
+}
+
+// ============================================================
+// MEDIA HELPER — fetch separately to avoid polymorphic join error
+// ============================================================
+async function fetchMedia(parentIds: string[]): Promise<Map<string, Media[]>> {
+  if (parentIds.length === 0) return new Map()
+  const { data } = await supabase
+    .from('media')
+    .select('*')
+    .in('parent_id', parentIds)
+  const map = new Map<string, Media[]>()
+  for (const row of data ?? []) {
+    if (!map.has(row.parent_id)) map.set(row.parent_id, [])
+    map.get(row.parent_id)!.push(row as Media)
+  }
+  return map
 }
 
 // ============================================================
@@ -86,14 +100,13 @@ export async function syncUserScore(userId: string): Promise<number> {
 export async function getMemories(): Promise<Memory[]> {
   const { data, error } = await supabase
     .from('memories')
-    .select(`
-      *,
-      media (*)
-    `)
+    .select('*')
     .order('memory_date', { ascending: false })
 
   if (error) throw new Error(error.message)
-  return (data ?? []).map(rowToMemory)
+  const rows = data ?? []
+  const mediaMap = await fetchMedia(rows.map(r => r.id))
+  return rows.map(row => rowToMemory(row, mediaMap.get(row.id) ?? []))
 }
 
 export async function insertMemory(
@@ -111,11 +124,11 @@ export async function insertMemory(
       created_by: payload.created_by,
       points: payload.points,
     })
-    .select(`*, media (*)`)
+    .select('*')
     .single()
 
   if (error || !data) throw new Error(error?.message || 'Failed to create memory.')
-  return rowToMemory(data)
+  return rowToMemory(data, [])
 }
 
 export async function updateMemory(
@@ -126,11 +139,12 @@ export async function updateMemory(
     .from('memories')
     .update(payload)
     .eq('id', id)
-    .select(`*, media (*)`)
+    .select('*')
     .single()
 
   if (error || !data) throw new Error(error?.message || 'Failed to update memory.')
-  return rowToMemory(data)
+  const mediaMap = await fetchMedia([id])
+  return rowToMemory(data, mediaMap.get(id) ?? [])
 }
 
 export async function deleteMemory(id: string): Promise<void> {
@@ -144,14 +158,13 @@ export async function deleteMemory(id: string): Promise<void> {
 export async function getEvents(): Promise<Event[]> {
   const { data, error } = await supabase
     .from('events')
-    .select(`
-      *,
-      media (*)
-    `)
+    .select('*')
     .order('date', { ascending: true })
 
   if (error) throw new Error(error.message)
-  return (data ?? []).map(rowToEvent)
+  const rows = data ?? []
+  const mediaMap = await fetchMedia(rows.map(r => r.id))
+  return rows.map(row => rowToEvent(row, mediaMap.get(row.id) ?? []))
 }
 
 export async function insertEvent(
@@ -170,11 +183,11 @@ export async function insertEvent(
       status: payload.status,
       created_by: payload.created_by,
     })
-    .select(`*, media (*)`)
+    .select('*')
     .single()
 
   if (error || !data) throw new Error(error?.message || 'Failed to create event.')
-  return rowToEvent(data)
+  return rowToEvent(data, [])
 }
 
 export async function updateEvent(
@@ -185,11 +198,12 @@ export async function updateEvent(
     .from('events')
     .update(payload)
     .eq('id', id)
-    .select(`*, media (*)`)
+    .select('*')
     .single()
 
   if (error || !data) throw new Error(error?.message || 'Failed to update event.')
-  return rowToEvent(data)
+  const mediaMap = await fetchMedia([id])
+  return rowToEvent(data, mediaMap.get(id) ?? [])
 }
 
 export async function deleteEvent(id: string): Promise<void> {
@@ -203,14 +217,13 @@ export async function deleteEvent(id: string): Promise<void> {
 export async function getNotes(): Promise<Note[]> {
   const { data, error } = await supabase
     .from('notes')
-    .select(`
-      *,
-      media (*)
-    `)
+    .select('*')
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(error.message)
-  return (data ?? []).map(rowToNote)
+  const rows = data ?? []
+  const mediaMap = await fetchMedia(rows.map(r => r.id))
+  return rows.map(row => rowToNote(row, mediaMap.get(row.id) ?? []))
 }
 
 export async function insertNote(
@@ -225,11 +238,11 @@ export async function insertNote(
       message: payload.message,
       read: payload.read,
     })
-    .select(`*, media (*)`)
+    .select('*')
     .single()
 
   if (error || !data) throw new Error(error?.message || 'Failed to create note.')
-  return rowToNote(data)
+  return rowToNote(data, [])
 }
 
 export async function updateNote(
@@ -240,11 +253,12 @@ export async function updateNote(
     .from('notes')
     .update(payload)
     .eq('id', id)
-    .select(`*, media (*)`)
+    .select('*')
     .single()
 
   if (error || !data) throw new Error(error?.message || 'Failed to update note.')
-  return rowToNote(data)
+  const mediaMap = await fetchMedia([id])
+  return rowToNote(data, mediaMap.get(id) ?? [])
 }
 
 export async function deleteNote(id: string): Promise<void> {
@@ -281,20 +295,16 @@ export async function deleteMediaRecord(mediaId: string): Promise<void> {
 }
 
 // ============================================================
-// UTILITY: Get the partner's profile id
+// UTILITY
 // ============================================================
 export async function getPartnerProfiles(currentUserId: string): Promise<{ id: string; name: string }[]> {
   const { data } = await supabase
     .from('profiles')
     .select('id, name')
     .neq('id', currentUserId)
-
   return data ?? []
 }
 
-// ============================================================
-// UTILITY: age calculation (pure, synchronous — no DB needed)
-// ============================================================
 export function calculateAge(birthDate: string): number {
   const birth = new Date(birthDate)
   const now = new Date()
@@ -309,7 +319,7 @@ export function calculateAge(birthDate: string): number {
 // ============================================================
 // ROW MAPPERS
 // ============================================================
-function rowToMemory(row: any): Memory {
+function rowToMemory(row: any, media: Media[]): Memory {
   return {
     id: row.id,
     title: row.title,
@@ -321,11 +331,11 @@ function rowToMemory(row: any): Memory {
     created_by: row.created_by,
     created_at: row.created_at,
     points: row.points ?? 10,
-    media: (row.media ?? []) as Media[],
+    media,
   }
 }
 
-function rowToEvent(row: any): Event {
+function rowToEvent(row: any, media: Media[]): Event {
   return {
     id: row.id,
     title: row.title,
@@ -338,11 +348,11 @@ function rowToEvent(row: any): Event {
     status: row.status ?? 'upcoming',
     created_by: row.created_by,
     created_at: row.created_at,
-    media: (row.media ?? []) as Media[],
+    media,
   }
 }
 
-function rowToNote(row: any): Note {
+function rowToNote(row: any, media: Media[]): Note {
   return {
     id: row.id,
     sender_id: row.sender_id,
@@ -351,6 +361,6 @@ function rowToNote(row: any): Note {
     message: row.message,
     read: row.read ?? false,
     created_at: row.created_at,
-    media: (row.media ?? []) as Media[],
+    media,
   }
 }

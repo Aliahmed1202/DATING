@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { getEvents, setEvents } from '../lib/data'
+import { getEvents, setEvents, setRelationshipScore, calculateRelationshipScore, calculateUserScore } from '../lib/data'
+import { getCurrentUser } from '../lib/auth'
 import { formatDate } from '../lib/utils'
 import ResponsiveNav from '../components/ResponsiveNav'
 import PageHeader from '../components/PageHeader'
@@ -12,6 +13,7 @@ import { Event } from '../types'
 import { MediaFile } from '../lib/storage'
 
 function Events() {
+  const user = getCurrentUser()
   const [events, setEventsState] = useState<Event[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingEventId, setEditingEventId] = useState<string | null>(null)
@@ -86,6 +88,16 @@ function Events() {
     
     setEvents(updatedEvents)
     setEventsState(updatedEvents)
+    
+    // Update relationship score dynamically
+    const newScore = calculateRelationshipScore()
+    setRelationshipScore(newScore)
+    
+    // Update user score dynamically
+    if (user) {
+      user.score = calculateUserScore(user.id)
+      localStorage.setItem('currentUser', JSON.stringify(user))
+    }
 
     setIsUploading(false)
     setShowAddForm(false)

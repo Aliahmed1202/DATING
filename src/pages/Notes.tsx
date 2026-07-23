@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getNotes, setNotes } from '../lib/data'
+import { getNotes, setNotes, setRelationshipScore, calculateRelationshipScore, calculateUserScore } from '../lib/data'
 import { getCurrentUser } from '../lib/auth'
 import { formatDate } from '../lib/utils'
 import ResponsiveNav from '../components/ResponsiveNav'
@@ -73,6 +73,14 @@ function Notes() {
     
     setNotes(updatedNotes)
     setNotesState(updatedNotes)
+    
+    // Update relationship score dynamically
+    const newScore = calculateRelationshipScore()
+    setRelationshipScore(newScore)
+    
+    // Update user score dynamically
+    user.score = calculateUserScore(user.id)
+    localStorage.setItem('currentUser', JSON.stringify(user))
 
     setIsUploading(false)
     setShowAddForm(false)

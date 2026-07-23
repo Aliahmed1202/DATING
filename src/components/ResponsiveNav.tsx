@@ -3,10 +3,12 @@ import { Home, Heart, Calendar, MessageSquare, User, LogOut } from 'lucide-react
 import { cn } from '../lib/utils'
 import { logout } from '../lib/auth'
 import { useNavigate } from 'react-router-dom'
+import { getCurrentUser } from '../lib/auth'
 
 function ResponsiveNav() {
   const location = useLocation()
   const navigate = useNavigate()
+  const user = getCurrentUser()
 
   const navItems = [
     { path: '/dashboard', icon: Home, label: 'Home' },
@@ -26,13 +28,26 @@ function ResponsiveNav() {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-soft fixed left-0 top-0 bottom-0 z-50">
         <div className="p-6">
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-gradient-to-br from-peach-400 to-coral-400 rounded-xl flex items-center justify-center">
               <Heart size={20} className="text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-800">Our Space</h1>
           </div>
-          <p className="text-sm text-gray-500 ml-13">Ali & Roma</p>
+          <div className="flex items-center gap-3 ml-1">
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.name}
+                className="w-10 h-10 rounded-xl object-cover"
+              />
+            ) : (
+              <div className="w-10 h-10 bg-gradient-to-br from-peach-400 to-coral-400 rounded-xl flex items-center justify-center text-white font-bold">
+                {user?.name.charAt(0)}
+              </div>
+            )}
+            <p className="text-sm text-gray-500">{user?.name}</p>
+          </div>
         </div>
 
         <nav className="flex-1 px-4">
@@ -88,6 +103,20 @@ function ResponsiveNav() {
               </Link>
             )
           })}
+          <div className="flex flex-col items-center gap-1 px-3 py-2">
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.name}
+                className="w-6 h-6 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-6 h-6 bg-gradient-to-br from-peach-400 to-coral-400 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                {user?.name.charAt(0)}
+              </div>
+            )}
+            <span className="text-xs font-medium text-gray-500">Profile</span>
+          </div>
         </div>
       </nav>
     </>

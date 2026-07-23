@@ -2,15 +2,21 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCurrentUser } from '../lib/auth'
 import { formatDate } from '../lib/utils'
+import { calculateAge } from '../lib/data'
 import ResponsiveNav from '../components/ResponsiveNav'
 import PageHeader from '../components/PageHeader'
 import { FormInput } from '../components/FormInput'
-import { User, LogOut, Edit2, Calendar, Mail, Heart } from 'lucide-react'
+import MediaUpload from '../components/MediaUpload'
+import { User, LogOut, Edit2, Calendar, Mail, Heart, Camera } from 'lucide-react'
+import { MediaFile } from '../lib/storage'
 
 function Profile() {
   const navigate = useNavigate()
   const user = getCurrentUser()
   const [isEditing, setIsEditing] = useState(false)
+  const [avatarFiles, setAvatarFiles] = useState<MediaFile[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [editedUser, setEditedUser] = useState({
     nickname: user?.nickname || '',
     birth_date: user?.birth_date || '',
@@ -21,12 +27,36 @@ function Profile() {
     navigate('/login')
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (user) {
+      setIsUploading(true)
+      setUploadProgress(0)
+
+      // Upload avatar if provided
+      if (avatarFiles.length > 0) {
+        try {
+          const { uploadMultipleMediaFiles } = await import('../lib/storage')
+          const uploadedMedia = await uploadMultipleMediaFiles(
+            avatarFiles.map(f => f.file),
+            user.id,
+            'avatar',
+            'avatar',
+            (progress) => setUploadProgress(progress)
+          )
+          if (uploadedMedia.length > 0) {
+            user.avatar = uploadedMedia[0].url
+          }
+        } catch (error) {
+          console.error('Failed to upload avatar:', error)
+        }
+      }
+
       user.nickname = editedUser.nickname
       user.birth_date = editedUser.birth_date
       localStorage.setItem('currentUser', JSON.stringify(user))
+      setIsUploading(false)
       setIsEditing(false)
+      setAvatarFiles([])
     }
   }
 
@@ -45,8 +75,23 @@ function Profile() {
         {/* Profile Card */}
         <div className="card mb-6 animate-fade-in">
           <div className="flex flex-col md:flex-row items-center gap-6 mb-8">
-            <div className="w-24 h-24 bg-gradient-to-br from-peach-400 to-coral-400 rounded-3xl flex items-center justify-center text-white text-4xl font-bold shadow-soft">
-              {user.name.charAt(0)}
+            <div className="relative group">
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-24 h-24 rounded-3xl object-cover shadow-soft"
+                />
+              ) : (
+                <div className="w-24 h-24 bg-gradient-to-br from-peach-400 to-coral-400 rounded-3xl flex items-center justify-center text-white text-4xl font-bold shadow-soft">
+                  {user.name.charAt(0)}
+                </div>
+              )}
+              {isEditing && (
+                <div className="absolute inset-0 bg-black/50 rounded-3xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                  <Camera size={24} className="text-white" />
+                </div>
+              )}
             </div>
             <div className="text-center md:text-left">
               <h2 className="text-3xl font-bold text-gray-800 mb-2">{user.name}</h2>
@@ -70,7 +115,12 @@ function Profile() {
                 <Calendar size={20} className="text-rose-500" />
                 <p className="text-sm text-gray-500">Birthday</p>
               </div>
-              <p className="text-xl font-semibold text-gray-800">{user.birth_date ? formatDate(user.birth_date) : 'Not set'}</p>
+              <p className="text-xl font-semibold text-gray-800">
+                {user.birth_date ? `${calculateAge(user.birth_date)} years old` : 'Not set'}
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                {user.birth_date ? formatDate(user.birth_date) : ''}
+              </p>
             </div>
           </div>
 
@@ -88,6 +138,15 @@ function Profile() {
           <div className="card mb-6 animate-scale-in">
             <h3 className="font-semibold text-gray-800 text-lg mb-6">Edit Profile</h3>
             <form onSubmit={handleSave} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Profile Picture</label>
+                <MediaUpload 
+                  mediaFiles={avatarFiles}
+                  onMediaChange={setAvatarFiles}
+                  maxFiles={1}
+                  accept="image/*"
+                />
+              </div>
               <FormInput
                 label="Nickname"
                 value={editedUser.nickname}
@@ -100,8 +159,22 @@ function Profile() {
                 value={editedUser.birth_date}
                 onChange={(e) => setEditedUser({ ...editedUser, birth_date: e.target.value })}
               />
-              <button type="submit" className="btn-primary w-full">
-                Save Changes
+              {isUploading && (
+                <div className="p-4 bg-rose-50 rounded-2xl">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-rose-700">Uploading...</span>
+                    <span className="text-sm text-rose-600">{Math.round(uploadProgress)}%</span>
+                  </div>
+                  <div className="w-full bg-rose-200 rounded-full h-2">
+                    <div 
+                      className="bg-rose-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+              <button type="submit" className="btn-primary w-full" disabled={isUploading}>
+                {isUploading ? 'Uploading...' : 'Save Changes'}
               </button>
             </form>
           </div>

@@ -1,3 +1,5 @@
+import { calculateUserScore } from './data'
+
 const USERS = {
   'aliahmesbiso@gmail.com': {
     id: 'ali-user-id',
@@ -5,8 +7,8 @@ const USERS = {
     name: 'Ali',
     nickname: 'Ali',
     avatar: null,
-    birth_date: '2000-01-19',
-    score: 55,
+    birth_date: '2006-01-19',
+    score: 0,
   },
   'romysaa.samir@icloud.com': {
     id: 'roma-user-id',
@@ -14,8 +16,8 @@ const USERS = {
     name: 'Roma',
     nickname: 'Roma',
     avatar: null,
-    birth_date: '2003-07-24',
-    score: 41,
+    birth_date: '2006-07-24',
+    score: 0,
   },
 }
 
@@ -24,6 +26,9 @@ export async function login(email: string) {
   if (!user) {
     throw new Error('Invalid email')
   }
+  
+  // Calculate user score dynamically
+  user.score = calculateUserScore(user.id)
   
   // Store user in localStorage for demo purposes
   localStorage.setItem('currentUser', JSON.stringify(user))

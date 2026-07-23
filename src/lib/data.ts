@@ -1,12 +1,16 @@
 import { Relationship, Memory, Event, Note, Notification, Level } from '../types'
 
-export const relationship: Relationship = {
-  id: 'rel-1',
-  name: 'Ali & Roma',
-  type: 'Dating',
-  start_date: '2025-02-22',
-  cover_photo: null,
-  score: 96,
+// Get relationship with calculated start date
+export function getRelationship(): Relationship {
+  const startDate = calculateRelationshipStartDate()
+  return {
+    id: 'rel-1',
+    name: 'Ali & Roma',
+    type: 'Dating',
+    start_date: startDate,
+    cover_photo: null,
+    score: getRelationshipScore(),
+  }
 }
 
 export const levels: Level[] = [
@@ -17,139 +21,56 @@ export const levels: Level[] = [
   { name: 'Our World', min_points: 1000, max_points: Infinity },
 ]
 
-export const demoMemories: Memory[] = [
-  {
-    id: 'mem-1',
-    title: 'First Time We Talked',
-    description: 'The beginning of everything',
-    memory_type: 'good',
-    memory_date: '2025-02-22',
-    mood: 'happy',
-    photo_url: null,
-    created_by: 'ali-user-id',
-    created_at: '2025-02-22T00:00:00Z',
-    points: 10,
-  },
-  {
-    id: 'mem-2',
-    title: 'Our First Phone Call',
-    description: 'We talked until 7:30 AM',
-    memory_type: 'good',
-    memory_date: '2025-04-06',
-    mood: 'excited',
-    photo_url: null,
-    created_by: 'roma-user-id',
-    created_at: '2025-04-06T00:00:00Z',
-    points: 10,
-  },
-  {
-    id: 'mem-3',
-    title: 'Our First Cinema Date',
-    description: '',
-    memory_type: 'good',
-    memory_date: '2026-02-04',
-    mood: 'happy',
-    photo_url: null,
-    created_by: 'ali-user-id',
-    created_at: '2026-02-04T00:00:00Z',
-    points: 10,
-  },
-  {
-    id: 'mem-4',
-    title: 'Asked You Out',
-    description: '',
-    memory_type: 'good',
-    memory_date: '2026-04-05',
-    mood: 'nervous',
-    photo_url: null,
-    created_by: 'ali-user-id',
-    created_at: '2026-04-05T00:00:00Z',
-    points: 10,
-  },
-]
+// Calculate relationship start date from earliest memory or event
+export function calculateRelationshipStartDate(): string {
+  const memories = getMemories()
+  const events = getEvents()
+  
+  let earliestDate: string | null = null
+  
+  // Find earliest memory date
+  memories.forEach(memory => {
+    if (!earliestDate || memory.created_at < earliestDate) {
+      earliestDate = memory.created_at
+    }
+  })
+  
+  // Find earliest event date
+  events.forEach(event => {
+    if (!earliestDate || event.created_at < earliestDate) {
+      earliestDate = event.created_at
+    }
+  })
+  
+  return earliestDate || new Date().toISOString()
+}
 
-export const demoEvents: Event[] = [
-  {
-    id: 'evt-1',
-    title: 'Roma Birthday',
-    event_type: 'birthday',
-    date: '2026-07-24',
-    time: null,
-    location: null,
-    description: null,
-    repeat_yearly: true,
-    status: 'upcoming',
-    created_by: 'ali-user-id',
-    created_at: '2025-02-22T00:00:00Z',
-  },
-  {
-    id: 'evt-2',
-    title: 'Ali Birthday',
-    event_type: 'birthday',
-    date: '2027-01-19',
-    time: null,
-    location: null,
-    description: null,
-    repeat_yearly: true,
-    status: 'upcoming',
-    created_by: 'roma-user-id',
-    created_at: '2025-02-22T00:00:00Z',
-  },
-  {
-    id: 'evt-3',
-    title: 'Our Anniversary',
-    event_type: 'anniversary',
-    date: '2027-02-22',
-    time: null,
-    location: null,
-    description: null,
-    repeat_yearly: true,
-    status: 'upcoming',
-    created_by: 'ali-user-id',
-    created_at: '2025-02-22T00:00:00Z',
-  },
-  {
-    id: 'evt-4',
-    title: 'Cinema Date',
-    event_type: 'date',
-    date: '2026-08-10',
-    time: '19:00',
-    location: null,
-    description: null,
-    repeat_yearly: false,
-    status: 'upcoming',
-    created_by: 'ali-user-id',
-    created_at: '2025-02-22T00:00:00Z',
-  },
-]
+// Calculate days together
+export function calculateDaysTogether(): number {
+  const startDate = calculateRelationshipStartDate()
+  const start = new Date(startDate)
+  const now = new Date()
+  const diffTime = Math.abs(now.getTime() - start.getTime())
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return diffDays
+}
 
-export const demoNotes: Note[] = [
-  {
-    id: 'note-1',
-    sender_id: 'ali-user-id',
-    receiver_id: 'roma-user-id',
-    type: 'thank_you',
-    message: 'Thank you for always making the smallest moments feel special.',
-    read: false,
-    created_at: '2025-04-06T00:00:00Z',
-  },
-]
-
-export const demoNotifications: Notification[] = [
-  {
-    id: 'notif-1',
-    user_id: 'roma-user-id',
-    title: 'New Memory',
-    message: 'Ali added a new memory',
-    read: false,
-    created_at: '2025-04-06T00:00:00Z',
-  },
-]
+// Calculate age from birth date
+export function calculateAge(birthDate: string): number {
+  const birth = new Date(birthDate)
+  const now = new Date()
+  let age = now.getFullYear() - birth.getFullYear()
+  const monthDiff = now.getMonth() - birth.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) {
+    age--
+  }
+  return age
+}
 
 // Local storage helpers
 export function getMemories(): Memory[] {
   const stored = localStorage.getItem('memories')
-  return stored ? JSON.parse(stored) : demoMemories
+  return stored ? JSON.parse(stored) : []
 }
 
 export function setMemories(memories: Memory[]) {
@@ -158,7 +79,7 @@ export function setMemories(memories: Memory[]) {
 
 export function getEvents(): Event[] {
   const stored = localStorage.getItem('events')
-  return stored ? JSON.parse(stored) : demoEvents
+  return stored ? JSON.parse(stored) : []
 }
 
 export function setEvents(events: Event[]) {
@@ -167,7 +88,7 @@ export function setEvents(events: Event[]) {
 
 export function getNotes(): Note[] {
   const stored = localStorage.getItem('notes')
-  return stored ? JSON.parse(stored) : demoNotes
+  return stored ? JSON.parse(stored) : []
 }
 
 export function setNotes(notes: Note[]) {
@@ -176,16 +97,65 @@ export function setNotes(notes: Note[]) {
 
 export function getNotifications(): Notification[] {
   const stored = localStorage.getItem('notifications')
-  return stored ? JSON.parse(stored) : demoNotifications
+  return stored ? JSON.parse(stored) : []
 }
 
 export function setNotifications(notifications: Notification[]) {
   localStorage.setItem('notifications', JSON.stringify(notifications))
 }
 
+// Calculate user score based on activities
+export function calculateUserScore(userId: string): number {
+  const memories = getMemories()
+  const events = getEvents()
+  const notes = getNotes()
+  
+  let score = 0
+  
+  // Points from memories (10 points each)
+  const userMemories = memories.filter(m => m.created_by === userId)
+  score += userMemories.length * 10
+  
+  // Points from events (5 points each)
+  const userEvents = events.filter(e => e.created_by === userId)
+  score += userEvents.length * 5
+  
+  // Points from notes sent (3 points each)
+  const userNotes = notes.filter(n => n.sender_id === userId)
+  score += userNotes.length * 3
+  
+  return score
+}
+
+// Calculate relationship score based on combined activities
+export function calculateRelationshipScore(): number {
+  const memories = getMemories()
+  const events = getEvents()
+  const notes = getNotes()
+  
+  let score = 0
+  
+  // Points from memories (10 points each)
+  score += memories.length * 10
+  
+  // Points from events (5 points each)
+  score += events.length * 5
+  
+  // Points from notes (3 points each)
+  score += notes.length * 3
+  
+  return score
+}
+
 export function getRelationshipScore(): number {
   const stored = localStorage.getItem('relationshipScore')
-  return stored ? parseInt(stored) : relationship.score
+  if (stored) {
+    return parseInt(stored)
+  }
+  // Calculate from activities if not stored
+  const calculated = calculateRelationshipScore()
+  setRelationshipScore(calculated)
+  return calculated
 }
 
 export function setRelationshipScore(score: number) {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getRelationshipScore, getMemories } from '../lib/data'
+import { getRelationshipScore, getMemories, calculateUserScore } from '../lib/data'
 import { formatDate } from '../lib/utils'
 import ResponsiveNav from '../components/ResponsiveNav'
 import CoupleHeaderCard from '../components/CoupleHeaderCard'
@@ -11,10 +11,14 @@ function Dashboard() {
   const navigate = useNavigate()
   const [score, setScore] = useState(0)
   const [memories, setMemories] = useState<any[]>([])
+  const [aliScore, setAliScore] = useState(0)
+  const [romaScore, setRomaScore] = useState(0)
 
   useEffect(() => {
     setScore(getRelationshipScore())
     setMemories(getMemories())
+    setAliScore(calculateUserScore('ali-user-id'))
+    setRomaScore(calculateUserScore('roma-user-id'))
   }, [])
 
   const quickActions = [
@@ -32,7 +36,7 @@ function Dashboard() {
         <CoupleHeaderCard />
 
         {/* Score Card */}
-        <ScoreCard score={score} showIndividual={true} aliScore={55} romaScore={41} />
+        <ScoreCard score={score} showIndividual={true} aliScore={aliScore} romaScore={romaScore} />
 
         {/* Quick Actions */}
         <div className="card animate-slide-up" style={{ animationDelay: '0.1s' }}>

@@ -38,7 +38,7 @@ export async function login(email: string): Promise<User> {
 
   if (!signInError && signInData.user) {
     await ensureProfile(signInData.user.id, normalised)
-    return getProfileById(signInData.user.id)
+    return getProfileByIdOrCreate(signInData.user.id, normalised)
   }
 
   // First time — create the account
@@ -56,7 +56,7 @@ export async function login(email: string): Promise<User> {
     }
 
     await ensureProfile(signUpData.user.id, normalised)
-    return getProfileById(signUpData.user.id)
+    return getProfileByIdOrCreate(signUpData.user.id, normalised)
   }
 
   throw new Error(signInError?.message || 'Login failed.')
@@ -82,6 +82,59 @@ export async function getCurrentUser(): Promise<User | null> {
  */
 export async function logout(): Promise<void> {
   await supabase.auth.signOut()
+}
+
+/**
+ * Fetch a profile row by user id — if it doesn't exist yet, create it first.
+ */
+async function getProfileByIdOrCreate(userId: string, email: string): Promise<User> {
+  // Give the DB trigger a moment if it's running async
+  await ensureProfile(userId, email)
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single()
+
+  if (error || !data) {
+    // Force insert and try one more time
+    await supabase.from('profiles').insert({
+      id: userId,
+      email,
+      name: ACCOUNTS[email]?.name ?? email,
+      nickname: ACCOUNTS[email]?.nickname ?? email,
+      birth_date: ACCOUNTS[email]?.birth_date ?? null,
+    })
+
+    const { data: retryData, error: retryError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (retryError || !retryData) throw new Error('Profile not found.')
+
+    return {
+      id: retryData.id,
+      email: retryData.email,
+      name: retryData.name,
+      nickname: retryData.nickname,
+      avatar: retryData.avatar ?? null,
+      birth_date: retryData.birth_date ?? null,
+      score: retryData.score ?? 0,
+    }
+  }
+
+  return {
+    id: data.id,
+    email: data.email,
+    name: data.name,
+    nickname: data.nickname,
+    avatar: data.avatar ?? null,
+    birth_date: data.birth_date ?? null,
+    score: data.score ?? 0,
+  }
 }
 
 /**
@@ -148,6 +201,7 @@ async function ensureProfile(userId: string, email: string): Promise<void> {
       name: account.name,
       nickname: account.nickname,
       birth_date: account.birth_date,
+      score: 0,
     },
     { onConflict: 'id', ignoreDuplicates: true }
   )

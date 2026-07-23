@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getEvents, insertEvent, updateEvent, deleteEvent, syncUserScore, getPartnerProfiles } from '../lib/data'
+import { getEvents, insertEvent, updateEvent, deleteEvent, syncUserScore } from '../lib/data'
 import { formatDate } from '../lib/utils'
 import ResponsiveNav from '../components/ResponsiveNav'
 import PageHeader from '../components/PageHeader'
@@ -34,13 +34,11 @@ function Events() {
   })
 
   useEffect(() => {
-    getCurrentUser().then(async (u) => {
-      setUser(u)
-      if (u) {
-        const partners = await getPartnerProfiles(u.id)
-        if (partners.length > 0) setPartnerName(partners[0].name)
-      }
-    })
+    const u = getCurrentUser()
+    setUser(u)
+    if (u) {
+      setPartnerName(u.id === 'ali-user-id' ? 'Roma' : 'Ali')
+    }
     loadEvents()
   }, [])
 

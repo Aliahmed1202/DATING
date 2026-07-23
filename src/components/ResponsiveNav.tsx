@@ -11,12 +11,8 @@ function ResponsiveNav() {
   const [user, setUser] = useState<UserType | null>(null)
 
   useEffect(() => {
-    getCurrentUser().then(setUser)
-
-    // Re-fetch when auth state changes (e.g. profile update)
-    const handleUserUpdate = () => {
-      getCurrentUser().then(setUser)
-    }
+    setUser(getCurrentUser())
+    const handleUserUpdate = () => setUser(getCurrentUser())
     window.addEventListener('user-updated', handleUserUpdate)
     return () => window.removeEventListener('user-updated', handleUserUpdate)
   }, [])
@@ -29,8 +25,8 @@ function ResponsiveNav() {
     { path: '/profile', icon: User, label: 'Profile' },
   ]
 
-  const handleLogout = async () => {
-    await logout()
+  const handleLogout = () => {
+    logout()
     navigate('/login')
   }
 
@@ -47,11 +43,7 @@ function ResponsiveNav() {
           </div>
           <div className="flex items-center gap-3 ml-1">
             {user?.avatar ? (
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-10 h-10 rounded-xl object-cover"
-              />
+              <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-xl object-cover" />
             ) : (
               <div className="w-10 h-10 bg-gradient-to-br from-peach-400 to-coral-400 rounded-xl flex items-center justify-center text-white font-bold">
                 {user?.name?.charAt(0) ?? '?'}
@@ -116,11 +108,7 @@ function ResponsiveNav() {
           })}
           <div className="flex flex-col items-center gap-1 px-3 py-2">
             {user?.avatar ? (
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-6 h-6 rounded-full object-cover"
-              />
+              <img src={user.avatar} alt={user.name} className="w-6 h-6 rounded-full object-cover" />
             ) : (
               <div className="w-6 h-6 bg-gradient-to-br from-peach-400 to-coral-400 rounded-full flex items-center justify-center text-white text-xs font-bold">
                 {user?.name?.charAt(0) ?? '?'}

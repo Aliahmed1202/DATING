@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getNotes, insertNote, updateNote, deleteNote, getPartnerProfiles, syncUserScore } from '../lib/data'
+import { getNotes, insertNote, updateNote, deleteNote, syncUserScore } from '../lib/data'
 import { getCurrentUser } from '../lib/auth'
 import { formatDate } from '../lib/utils'
 import ResponsiveNav from '../components/ResponsiveNav'
@@ -29,16 +29,15 @@ function Notes() {
   })
 
   useEffect(() => {
-    getCurrentUser().then(async (u) => {
-      setUser(u)
-      if (u) {
-        const partners = await getPartnerProfiles(u.id)
-        if (partners.length > 0) {
-          setPartnerId(partners[0].id)
-          setPartnerName(partners[0].name)
-        }
-      }
-    })
+    const u = getCurrentUser()
+    setUser(u)
+    if (u) {
+      const partner = u.id === 'ali-user-id'
+        ? { id: 'roma-user-id', name: 'Roma' }
+        : { id: 'ali-user-id', name: 'Ali' }
+      setPartnerId(partner.id)
+      setPartnerName(partner.name)
+    }
     loadNotes()
   }, [])
 

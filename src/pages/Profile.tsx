@@ -21,16 +21,15 @@ function Profile() {
   const [editedUser, setEditedUser] = useState({ nickname: '', birth_date: '' })
 
   useEffect(() => {
-    getCurrentUser().then((u) => {
-      if (u) {
-        setUser(u)
-        setEditedUser({ nickname: u.nickname || '', birth_date: u.birth_date || '' })
-      }
-    })
+    const u = getCurrentUser()
+    if (u) {
+      setUser(u)
+      setEditedUser({ nickname: u.nickname || '', birth_date: u.birth_date || '' })
+    }
   }, [])
 
-  const handleLogout = async () => {
-    await logout()
+  const handleLogout = () => {
+    logout()
     navigate('/login')
   }
 
@@ -58,8 +57,8 @@ function Profile() {
         }
       }
 
-      // Persist all changes to the profiles table
-      const updated = await updateProfile(user.id, {
+      // Save changes to localStorage
+      const updated = updateProfile(user.id, {
         nickname: editedUser.nickname,
         birth_date: editedUser.birth_date || null,
         avatar: avatarUrl,

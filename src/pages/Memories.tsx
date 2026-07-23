@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getMemories, insertMemory, updateMemory, deleteMemory, syncUserScore, getPartnerProfiles } from '../lib/data'
+import { getMemories, insertMemory, updateMemory, deleteMemory, syncUserScore } from '../lib/data'
 import { getCurrentUser } from '../lib/auth'
 import { formatDate } from '../lib/utils'
 import ResponsiveNav from '../components/ResponsiveNav'
@@ -31,13 +31,14 @@ function Memories() {
   })
 
   useEffect(() => {
-    getCurrentUser().then(async (u) => {
-      setUser(u)
-      if (u) {
-        const partners = await getPartnerProfiles(u.id)
-        if (partners.length > 0) setPartnerName(partners[0].name)
-      }
-    })
+    const u = getCurrentUser()
+    setUser(u)
+    if (u) {
+      const partner = u.id === 'ali-user-id'
+        ? { name: 'Roma' }
+        : { name: 'Ali' }
+      setPartnerName(partner.name)
+    }
     loadMemories()
   }, [])
 

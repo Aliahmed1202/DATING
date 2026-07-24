@@ -13,16 +13,15 @@ export const levels: Level[] = [
 ]
 
 // ============================================================
-// RELATIONSHIP (derived from memories + events)
+// RELATIONSHIP
 // ============================================================
 export async function getRelationship(): Promise<Relationship> {
-  const startDate = '2025-02-22'
   const score = await calculateRelationshipScore()
   return {
     id: 'rel-1',
     name: 'Ali & Roma',
     type: 'Dating',
-    start_date: startDate,
+    start_date: '2025-02-22',
     cover_photo: null,
     score,
   }
@@ -35,29 +34,28 @@ export async function calculateRelationshipStartDate(): Promise<string> {
 export async function calculateDaysTogether(): Promise<number> {
   const start = new Date('2025-02-22')
   const now = new Date()
-  const diffTime = Math.abs(now.getTime() - start.getTime())
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return Math.ceil(Math.abs(now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
 }
 
 // ============================================================
 // SCORES
 // ============================================================
 export async function calculateRelationshipScore(): Promise<number> {
-  const [{ count: memCount }, { count: evtCount }, { count: noteCount }] = await Promise.all([
+  const [{ count: m }, { count: e }, { count: n }] = await Promise.all([
     supabase.from('memories').select('*', { count: 'exact', head: true }),
     supabase.from('events').select('*', { count: 'exact', head: true }),
     supabase.from('notes').select('*', { count: 'exact', head: true }),
   ])
-  return ((memCount ?? 0) * 10) + ((evtCount ?? 0) * 5) + ((noteCount ?? 0) * 3)
+  return ((m ?? 0) * 10) + ((e ?? 0) * 5) + ((n ?? 0) * 3)
 }
 
 export async function calculateUserScore(userId: string): Promise<number> {
-  const [{ count: memCount }, { count: evtCount }, { count: noteCount }] = await Promise.all([
+  const [{ count: m }, { count: e }, { count: n }] = await Promise.all([
     supabase.from('memories').select('*', { count: 'exact', head: true }).eq('created_by', userId),
     supabase.from('events').select('*', { count: 'exact', head: true }).eq('created_by', userId),
     supabase.from('notes').select('*', { count: 'exact', head: true }).eq('sender_id', userId),
   ])
-  return ((memCount ?? 0) * 10) + ((evtCount ?? 0) * 5) + ((noteCount ?? 0) * 3)
+  return ((m ?? 0) * 10) + ((e ?? 0) * 5) + ((n ?? 0) * 3)
 }
 
 export async function syncUserScore(userId: string): Promise<number> {
@@ -67,14 +65,11 @@ export async function syncUserScore(userId: string): Promise<number> {
 }
 
 // ============================================================
-// MEDIA HELPER — fetch separately to avoid polymorphic join error
+// MEDIA HELPER
 // ============================================================
 async function fetchMedia(parentIds: string[]): Promise<Map<string, Media[]>> {
   if (parentIds.length === 0) return new Map()
-  const { data } = await supabase
-    .from('media')
-    .select('*')
-    .in('parent_id', parentIds)
+  const { data } = await supabase.from('media').select('*').in('parent_id', parentIds)
   const map = new Map<string, Media[]>()
   for (const row of data ?? []) {
     if (!map.has(row.parent_id)) map.set(row.parent_id, [])
@@ -101,6 +96,7 @@ export async function getMemories(): Promise<Memory[]> {
 export async function insertMemory(
   payload: Omit<Memory, 'id' | 'created_at' | 'media'>
 ): Promise<Memory> {
+  // Insert without .single() to avoid "coerce to single JSON" error
   const { data, error } = await supabase
     .from('memories')
     .insert({
@@ -114,10 +110,11 @@ export async function insertMemory(
       points: payload.points,
     })
     .select('*')
-    .single()
 
-  if (error || !data) throw new Error(error?.message || 'Failed to create memory.')
-  return rowToMemory(data, [])
+  if (error) throw new Error(error.message)
+  const row = (data ?? [])[0]
+  if (!row) throw new Error('Failed to create memory.')
+  return rowToMemory(row, [])
 }
 
 export async function updateMemory(
@@ -129,11 +126,12 @@ export async function updateMemory(
     .update(payload)
     .eq('id', id)
     .select('*')
-    .single()
 
-  if (error || !data) throw new Error(error?.message || 'Failed to update memory.')
+  if (error) throw new Error(error.message)
+  const row = (data ?? [])[0]
+  if (!row) throw new Error('Failed to update memory.')
   const mediaMap = await fetchMedia([id])
-  return rowToMemory(data, mediaMap.get(id) ?? [])
+  return rowToMemory(row, mediaMap.get(id) ?? [])
 }
 
 export async function deleteMemory(id: string): Promise<void> {
@@ -173,10 +171,11 @@ export async function insertEvent(
       created_by: payload.created_by,
     })
     .select('*')
-    .single()
 
-  if (error || !data) throw new Error(error?.message || 'Failed to create event.')
-  return rowToEvent(data, [])
+  if (error) throw new Error(error.message)
+  const row = (data ?? [])[0]
+  if (!row) throw new Error('Failed to create event.')
+  return rowToEvent(row, [])
 }
 
 export async function updateEvent(
@@ -188,11 +187,12 @@ export async function updateEvent(
     .update(payload)
     .eq('id', id)
     .select('*')
-    .single()
 
-  if (error || !data) throw new Error(error?.message || 'Failed to update event.')
+  if (error) throw new Error(error.message)
+  const row = (data ?? [])[0]
+  if (!row) throw new Error('Failed to update event.')
   const mediaMap = await fetchMedia([id])
-  return rowToEvent(data, mediaMap.get(id) ?? [])
+  return rowToEvent(row, mediaMap.get(id) ?? [])
 }
 
 export async function deleteEvent(id: string): Promise<void> {
@@ -228,10 +228,11 @@ export async function insertNote(
       read: payload.read,
     })
     .select('*')
-    .single()
 
-  if (error || !data) throw new Error(error?.message || 'Failed to create note.')
-  return rowToNote(data, [])
+  if (error) throw new Error(error.message)
+  const row = (data ?? [])[0]
+  if (!row) throw new Error('Failed to create note.')
+  return rowToNote(row, [])
 }
 
 export async function updateNote(
@@ -243,9 +244,10 @@ export async function updateNote(
     .update(payload)
     .eq('id', id)
     .select('*')
-    .single()
 
-  if (error || !data) throw new Error(error?.message || 'Failed to update note.')
+  if (error) throw new Error(error.message)
+  const row = (data ?? [])[0]
+  if (!row) throw new Error('Failed to update note.')
   const mediaMap = await fetchMedia([id])
   return rowToNote(data, mediaMap.get(id) ?? [])
 }
@@ -272,10 +274,11 @@ export async function insertMediaRecord(record: {
     .from('media')
     .insert(record)
     .select('*')
-    .single()
 
-  if (error || !data) throw new Error(error?.message || 'Failed to save media record.')
-  return data as Media
+  if (error) throw new Error(error.message)
+  const row = (data ?? [])[0]
+  if (!row) throw new Error('Failed to save media record.')
+  return row as Media
 }
 
 export async function deleteMediaRecord(mediaId: string): Promise<void> {
@@ -287,10 +290,7 @@ export async function deleteMediaRecord(mediaId: string): Promise<void> {
 // UTILITY
 // ============================================================
 export async function getPartnerProfiles(currentUserId: string): Promise<{ id: string; name: string }[]> {
-  const { data } = await supabase
-    .from('profiles')
-    .select('id, name')
-    .neq('id', currentUserId)
+  const { data } = await supabase.from('profiles').select('id, name').neq('id', currentUserId)
   return data ?? []
 }
 
@@ -299,9 +299,7 @@ export function calculateAge(birthDate: string): number {
   const now = new Date()
   let age = now.getFullYear() - birth.getFullYear()
   const monthDiff = now.getMonth() - birth.getMonth()
-  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) {
-    age--
-  }
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) age--
   return age
 }
 

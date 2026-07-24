@@ -1,5 +1,4 @@
 import { supabase } from './supabase'
-import { insertMediaRecord } from './data'
 
 const BUCKET_NAME = 'loll'
 
@@ -106,21 +105,24 @@ export const uploadMediaFile = async (
 
   // Persist a record in the media table for non-avatar uploads
   if (parentType !== 'avatar') {
-    try {
-      const saved = await insertMediaRecord({
+    const { data: mediaData, error: mediaError } = await supabase
+      .from('media')
+      .insert({
         parent_id: parentId,
-        parent_type: parentType as 'memory' | 'event' | 'note',
+        parent_type: parentType,
         type: validation.type,
         url: publicUrl,
         file_path: filePath,
         name: file.name,
         size: file.size,
-        uploaded_by: userId,
+        // uploaded_by intentionally omitted — no FK constraint needed
       })
-      // Use the DB-generated UUID so the caller has the real id
-      result.id = saved.id
-    } catch (dbErr) {
-      console.error('Media DB record save failed (file is still in bucket):', dbErr)
+      .select('*')
+
+    if (mediaError) {
+      console.error('Media DB insert error:', mediaError.message)
+    } else if (mediaData && mediaData[0]) {
+      result.id = mediaData[0].id
     }
   }
 

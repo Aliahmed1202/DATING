@@ -268,11 +268,13 @@ export async function insertMediaRecord(record: {
   file_path: string
   name: string
   size: number
-  uploaded_by: string
+  uploaded_by?: string
 }): Promise<Media> {
+  // Strip uploaded_by to avoid FK constraint issues
+  const { uploaded_by, ...safeRecord } = record
   const { data, error } = await supabase
     .from('media')
-    .insert(record)
+    .insert(safeRecord)
     .select('*')
 
   if (error) throw new Error(error.message)

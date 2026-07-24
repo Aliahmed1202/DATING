@@ -318,14 +318,15 @@ function Memories() {
                   </span>
                 </div>
 
-                {memory.description && (
-                  <p className="text-gray-600 text-sm mb-4 leading-relaxed">{memory.description}</p>
-                )}
-
+                {/* Photo strip — shown prominently before description */}
                 {memory.media && memory.media.length > 0 && (
-                  <div className="mb-4">
+                  <div className="-mx-6 mb-4">
                     <MediaGallery media={memory.media} />
                   </div>
+                )}
+
+                {memory.description && (
+                  <p className="text-gray-600 text-sm mb-4 leading-relaxed">{memory.description}</p>
                 )}
 
                 <div className="flex justify-between items-center">

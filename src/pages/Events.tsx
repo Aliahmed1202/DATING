@@ -381,14 +381,15 @@ function Events() {
                       )}
                     </div>
 
-                    {event.description && (
-                      <p className="text-gray-600 text-sm mb-3">{event.description}</p>
-                    )}
-
+                    {/* Photo strip */}
                     {event.media && event.media.length > 0 && (
-                      <div className="mb-3">
+                      <div className="-mx-4 mb-3">
                         <MediaGallery media={event.media} />
                       </div>
+                    )}
+
+                    {event.description && (
+                      <p className="text-gray-600 text-sm mb-3">{event.description}</p>
                     )}
 
                     {event.repeat_yearly && (

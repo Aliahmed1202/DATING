@@ -294,8 +294,9 @@ function Notes() {
 
                     <p className="text-gray-800 leading-relaxed">{note.message}</p>
 
+                    {/* Photo — shown below message */}
                     {note.media && note.media.length > 0 && (
-                      <div className="mt-3">
+                      <div className="mt-3 -mx-2 rounded-2xl overflow-hidden">
                         <MediaGallery media={note.media} />
                       </div>
                     )}
